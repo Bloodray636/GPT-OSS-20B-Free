@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Логин
   loginBtn.addEventListener('click', async () => {
-    const username = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!username || !password) {
+    if (!email || !password) {
       loginError.textContent = 'Заполните все поля';
       return;
     }
@@ -37,10 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ email, password })
       });
       const data = await res.json();
       if (res.ok) {
+        localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
       } else {
         loginError.textContent = data.error || 'Ошибка входа';
@@ -53,9 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Регистрация
   registerBtn.addEventListener('click', async () => {
     const username = document.getElementById('regUsername').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
-    if (!username || !password || !confirm) {
+    if (!username || !email || !password || !confirm) {
       registerError.textContent = 'Заполните все поля';
       return;
     }
@@ -75,10 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, email, password })
       });
       const data = await res.json();
       if (res.ok) {
+        localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
       } else {
         registerError.textContent = data.error || 'Ошибка регистрации';

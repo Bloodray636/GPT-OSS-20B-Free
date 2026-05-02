@@ -117,43 +117,36 @@ const deleteChat = async (chatId, userId) => {
 
 // ===== Auth endpoints =====
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, password } = req.body;
   if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
   if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
   if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: `${username}@temp.local`,
+    email: email,
     password,
+    options: { data: { username } } // передаём username в метаданные
   });
   if (authError) return res.status(400).json({ error: authError.message });
 
+  // Профиль создаст триггер, а настройки создадим здесь
   const userId = authData.user.id;
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .insert({ id: userId, username });
-  if (profileError) {
-    await supabase.auth.admin.deleteUser(userId);
-    return res.status(500).json({ error: 'Failed to create profile' });
-  }
-  await supabase.from('user_settings').insert({ user_id: userId, theme: 'dark', save_history: true });
+  await supabase.from('user_settings').upsert(
+    { user_id: userId, theme: 'dark', save_history: true },
+    { onConflict: 'user_id' }
+  ).catch(err => console.error('Settings error:', err));
+
   res.json({ success: true, token: authData.session?.access_token });
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('username', username)
-    .single();
-  if (!profile) return res.status(401).json({ error: 'Invalid credentials' });
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: `${username}@temp.local`,
-    password,
-  });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return res.status(401).json({ error: 'Invalid credentials' });
+
   res.json({ success: true, token: data.session?.access_token });
 });
 
