@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // DOM
   const loginFormDiv = document.getElementById('loginForm');
   const registerFormDiv = document.getElementById('registerForm');
   const showRegisterLink = document.getElementById('showRegister');
@@ -8,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginError = document.getElementById('loginError');
   const registerError = document.getElementById('registerError');
 
+  // Переключение между формами
   showRegisterLink.addEventListener('click', (e) => {
     e.preventDefault();
     loginFormDiv.style.display = 'none';
@@ -26,19 +28,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Логин
   loginBtn.addEventListener('click', async () => {
-    const username = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!username || !password) {
+
+    if (!email || !password) {
       loginError.textContent = 'Заполните все поля';
       return;
     }
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ email, password })
       });
       const data = await res.json();
+
       if (res.ok) {
         if (data.token) localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
@@ -53,31 +58,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // Регистрация
   registerBtn.addEventListener('click', async () => {
     const username = document.getElementById('regUsername').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
-    if (!username || !password || !confirm) {
+
+    if (!username || !email || !password || !confirm) {
       registerError.textContent = 'Заполните все поля';
       return;
     }
+
     if (password !== confirm) {
       registerError.textContent = 'Пароли не совпадают';
       return;
     }
+
     if (password.length < 6) {
       registerError.textContent = 'Пароль должен быть не менее 6 символов';
       return;
     }
+
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       registerError.textContent = 'Имя: только буквы, цифры, подчеркивание';
       return;
     }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, email, password })
       });
       const data = await res.json();
+
       if (res.ok) {
         if (data.token) localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
@@ -89,11 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Глазки для паролей
+  // Показ пароля
   document.querySelectorAll('.toggle-password').forEach(btn => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-target');
       const input = document.getElementById(targetId);
+
       if (input) {
         input.type = input.type === 'password' ? 'text' : 'password';
       }

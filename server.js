@@ -4,17 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import OpenAI from 'openai';
 
+// Инициализация
 const app = express();
 
-// Supabase клиенты
+// Конфигурация Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-const supabaseAdmin = supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
+const supabaseAdmin = supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 // OpenAI
 const openai = new OpenAI({
@@ -26,37 +25,69 @@ const openai = new OpenAI({
 app.use(express.json());
 app.use(express.static('public'));
 
-// ===== Middleware: проверка JWT =====
+// Утилиты
+const isValidUsername = (username) => username && username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
+const isValidEmail = (email) => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPassword = (password) => password && password.length >= 6;
+
+// Аутентификация
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid token' });
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Missing or invalid token'
+    });
   }
+
   const token = authHeader.split(' ')[1];
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  const {
+    data: {
+      user
+    }, error
+  } = await supabase.auth.getUser(token);
+
   if (error || !user) {
     return res.status(401).json({ error: 'Invalid token' });
   }
+
   req.user = user;
   next();
 };
 
-// ===== Вспомогательные функции =====
+// БД
 const getUserSettings = async (userId) => {
   const { data, error } = await supabase
     .from('user_settings')
     .select('theme, save_history')
     .eq('user_id', userId)
     .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return { theme: data?.theme || 'dark', saveHistory: data?.save_history !== false };
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+
+  return {
+    theme: data?.theme || 'dark',
+    saveHistory: data?.save_history !== false
+  };
 };
 
 const saveUserSettings = async (userId, theme, saveHistory) => {
   const { error } = await supabase
     .from('user_settings')
-    .upsert({ user_id: userId, theme, save_history: saveHistory }, { onConflict: 'user_id' });
-  if (error) throw error;
+    .upsert({
+      user_id: userId,
+      theme,
+      save_history: saveHistory
+    }, {
+      onConflict: 'user_id'
+    });
+
+  if (error) {
+    throw error;
+  }
 };
 
 const getChats = async (userId) => {
@@ -64,8 +95,14 @@ const getChats = async (userId) => {
     .from('chats')
     .select('id, title, created_at')
     .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  if (error) throw error;
+    .order('updated_at', {
+      ascending: false
+    });
+
+  if (error) {
+    throw error;
+  }
+
   return data;
 };
 
@@ -76,13 +113,21 @@ const getChatById = async (chatId, userId) => {
     .eq('id', chatId)
     .eq('user_id', userId)
     .single();
-  if (error) return null;
+
+  if (error) {
+    return null;
+  }
+
   const { data: messages } = await supabase
     .from('messages')
     .select('id, role, content, reasoning, created_at')
     .eq('chat_id', chatId)
-    .order('created_at', { ascending: true });
+    .order('created_at', {
+      ascending: true
+    });
+
   data.messages = messages || [];
+
   return data;
 };
 
@@ -99,14 +144,17 @@ const saveChat = async (chat, userId) => {
       },
       { onConflict: 'id' }
     );
+
   await supabase.from('messages').delete().eq('chat_id', chat.id);
-  if (chat.messages && chat.messages.length) {
+
+  if (chat.messages?.length) {
     const messagesToInsert = chat.messages.map(msg => ({
       chat_id: chat.id,
       role: msg.role,
       content: msg.content,
       reasoning: msg.reasoning || null,
     }));
+
     await supabase.from('messages').insert(messagesToInsert);
   }
 };
@@ -115,95 +163,94 @@ const deleteChat = async (chatId, userId) => {
   await supabase.from('chats').delete().eq('id', chatId).eq('user_id', userId);
 };
 
-// ===== Auth endpoints =====
+// API
 app.post('/api/auth/register', async (req, res) => {
-  console.log('REGISTER: Request received', { body: req.body });
   const { username, email, password } = req.body;
-  
-  // Валидация
-  if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
+
+  if (!isValidUsername(username)) {
+    return res.status(400).json({ error: 'Invalid username' });
+  }
+
+  if (!isValidPassword(password)) {
+    return res.status(400).json({ error: 'Password too short (min 6)' });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
 
   try {
-    // Проверяем наличие admin клиента
-    if (!supabaseAdmin) {
-      console.error('REGISTER ERROR: supabaseAdmin is not available');
-      return res.status(500).json({ error: 'Server misconfiguration' });
-    }
-
-    console.log('REGISTER: Creating user via admin API...');
-    const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { username }
+      user_metadata: { username },
     });
-    if (createError) {
-      console.error('REGISTER: Admin createUser error', createError);
-      if (createError.message.includes('already been registered')) {
-        // Пробуем войти
-        const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signError) return res.status(409).json({ error: 'User exists but wrong credentials' });
+
+    if (error) {
+      if (error.message.includes('already been registered')) {
+        const {
+          data: signData,
+          error: signError
+        } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (signError) {
+          return res.status(409).json({ error: 'User exists but wrong credentials' });
+        }
+
         return res.json({ success: true, token: signData.session?.access_token });
       }
-      throw new Error(createError.message);
-    }
-    
-    if (!authData.user) {
-      console.error('REGISTER: No user returned from admin create');
-      throw new Error('User not created');
-    }
-    const userId = authData.user.id;
-    console.log(`REGISTER: User created with ID ${userId}`);
 
-    // Попытка добавить настройки (не критично)
-    try {
-      const { error: settingsError } = await supabase
-        .from('user_settings')
-        .upsert({ user_id: userId, theme: 'dark', save_history: true }, { onConflict: 'user_id' });
-      if (settingsError) console.warn('REGISTER: settings upsert warning', settingsError);
-      else console.log('REGISTER: settings upsert OK');
-    } catch (errSettings) {
-      console.warn('REGISTER: settings exception', errSettings);
+      throw error;
     }
 
-    // Получение токена
-    let token = null;
-    try {
-      const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signError) {
-        console.warn('REGISTER: signIn after creation failed', signError);
-      } else {
-        token = signData.session?.access_token;
-        console.log('REGISTER: signIn OK, token obtained');
-      }
-    } catch (errSign) {
-      console.warn('REGISTER: signIn exception', errSign);
+    const userId = data.user.id;
+
+    // Настройки по умолчанию (не критично)
+    await supabase.from('user_settings').upsert(
+      {
+        user_id: userId,
+        theme: 'dark',
+        save_history: true
+      },
+      { onConflict: 'user_id' }
+    ).catch(() => null);
+
+    const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (signError) {
+      return res.json({ success: true });
     }
 
-    // Ответ
-    return res.json({ success: true, token });
+    return res.json({ success: true, token: signData.session?.access_token });
+
   } catch (err) {
-    console.error('REGISTER: Unhandled error', err);
-    return res.status(500).json({ error: err.message || 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return res.status(401).json({ error: 'Invalid credentials' });
+
+  if (error) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
 
   res.json({ success: true, token: data.session?.access_token });
 });
 
-app.post('/api/auth/logout', (req, res) => {
-  res.json({ success: true });
-});
+app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
 
 app.get('/api/auth/status', authenticate, (req, res) => {
   res.json({ authenticated: true, username: req.user.email?.split('@')[0] });
@@ -211,70 +258,109 @@ app.get('/api/auth/status', authenticate, (req, res) => {
 
 app.post('/api/auth/change-password', authenticate, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  if (!oldPassword || newPassword.length < 6) return res.status(400).json({ error: 'Invalid password' });
+
+  if (!oldPassword || !isValidPassword(newPassword)) {
+    return res.status(400).json({ error: 'Invalid password (min 6 characters)' });
+  }
 
   const { error: signError } = await supabase.auth.signInWithPassword({
     email: req.user.email,
     password: oldPassword,
   });
-  if (signError) return res.status(401).json({ error: 'Old password incorrect' });
+
+  if (signError) {
+    return res.status(401).json({ error: 'Old password incorrect' });
+  }
 
   const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) return res.status(500).json({ error: error.message });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
   res.json({ success: true });
 });
 
 app.post('/api/auth/change-username', authenticate, async (req, res) => {
   const { newUsername } = req.body;
-  if (!newUsername || newUsername.length < 3) return res.status(400).json({ error: 'Invalid username' });
-  if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) return res.status(400).json({ error: 'Invalid chars' });
+
+  if (!isValidUsername(newUsername)) {
+    return res.status(400).json({ error: 'Invalid username' });
+  }
 
   const { data: existing } = await supabase
     .from('profiles')
     .select('id')
     .eq('username', newUsername)
     .single();
-  if (existing) return res.status(409).json({ error: 'Username taken' });
+
+  if (existing) {
+    return res.status(409).json({ error: 'Username taken' });
+  }
 
   const { error } = await supabase
     .from('profiles')
     .update({ username: newUsername })
     .eq('id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
   res.json({ success: true, newUsername });
 });
 
 app.delete('/api/auth/delete-account', authenticate, async (req, res) => {
   const { password } = req.body;
-  if (!supabaseAdmin) return res.status(500).json({ error: 'Admin client not configured' });
+
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Admin client not configured' });
+  }
 
   const { error: signError } = await supabase.auth.signInWithPassword({
     email: req.user.email,
     password,
   });
-  if (signError) return res.status(401).json({ error: 'Invalid password' });
+
+  if (signError) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
 
   await supabase.from('profiles').delete().eq('id', req.user.id);
   await supabaseAdmin.auth.admin.deleteUser(req.user.id);
+
   res.json({ success: true });
 });
 
-// ===== Настройки =====
+// Настройки
 app.get('/api/settings', authenticate, async (req, res) => {
-  const settings = await getUserSettings(req.user.id);
-  res.json(settings);
+  try {
+    const settings = await getUserSettings(req.user.id);
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/settings', authenticate, async (req, res) => {
   const { theme, saveHistory } = req.body;
-  await saveUserSettings(req.user.id, theme, saveHistory);
-  res.json({ success: true });
+
+  try {
+    await saveUserSettings(req.user.id, theme, saveHistory);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ===== Чаты =====
+// Чаты
 app.get('/api/chats', authenticate, async (req, res) => {
-  const chats = await getChats(req.user.id);
-  res.json(chats);
+  try {
+    const chats = await getChats(req.user.id);
+    res.json(chats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/chats', authenticate, async (req, res) => {
@@ -284,77 +370,161 @@ app.post('/api/chats', authenticate, async (req, res) => {
     createdAt: new Date().toISOString(),
     messages: [],
   };
-  await saveChat(newChat, req.user.id);
-  res.json(newChat);
+
+  try {
+    await saveChat(newChat, req.user.id);
+    res.json(newChat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/chats/:chatId', authenticate, async (req, res) => {
-  await deleteChat(req.params.chatId, req.user.id);
-  res.json({ success: true });
+  try {
+    await deleteChat(req.params.chatId, req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/chats/:chatId', authenticate, async (req, res) => {
   const { title } = req.body;
-  if (!title) return res.status(400).json({ error: 'Title required' });
+
+  if (!title) {
+    return res.status(400).json({ error: 'Title required' });
+  }
+
   const { error } = await supabase
     .from('chats')
     .update({ title })
     .eq('id', req.params.chatId)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
   res.json({ success: true });
 });
 
 app.put('/api/chats/:chatId/truncate', authenticate, async (req, res) => {
   const { keepIndex } = req.body;
-  const chat = await getChatById(req.params.chatId, req.user.id);
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
-  if (keepIndex === -1) chat.messages = [];
-  else if (keepIndex >= 0 && keepIndex < chat.messages.length) chat.messages = chat.messages.slice(0, keepIndex + 1);
-  else return res.status(400).json({ error: 'Invalid keepIndex' });
-  await saveChat(chat, req.user.id);
-  res.json({ success: true });
+
+  if (typeof keepIndex !== 'number') {
+    return res.status(400).json({ error: 'keepIndex required' });
+  }
+
+  try {
+    const chat = await getChatById(req.params.chatId, req.user.id);
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    if (keepIndex === -1) {
+      chat.messages = [];
+    } else if (keepIndex >= 0 && keepIndex < chat.messages.length) {
+      chat.messages = chat.messages.slice(0, keepIndex + 1);
+    } else {
+      return res.status(400).json({ error: 'Invalid keepIndex' });
+    }
+
+    await saveChat(chat, req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/chats/:chatId', authenticate, async (req, res) => {
-  const chat = await getChatById(req.params.chatId, req.user.id);
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
-  res.json(chat);
+  try {
+    const chat = await getChatById(req.params.chatId, req.user.id);
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    res.json(chat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/chats/all', authenticate, async (req, res) => {
-  const { error } = await supabase.from('chats').delete().eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  try {
+    const { error } = await supabase.from('chats').delete().eq('user_id', req.user.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ===== Аватары =====
+// Аватары
 app.post('/api/user/avatar', authenticate, async (req, res) => {
   const { avatarUrl } = req.body;
-  if (!avatarUrl) return res.status(400).json({ error: 'No avatar URL' });
-  const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+
+  if (!avatarUrl) {
+    return res.status(400).json({ error: 'No avatar URL' });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', req.user.id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/user/avatar', authenticate, async (req, res) => {
-  const { data } = await supabase.from('profiles').select('avatar_url').eq('id', req.user.id).single();
-  if (data?.avatar_url) res.json({ url: data.avatar_url });
-  else res.status(404).json({ error: 'Not found' });
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', req.user.id)
+      .single();
+
+    if (data?.avatar_url) {
+      res.json({ url: data.avatar_url });
+    } else {
+      res.status(404).json({ error: 'Not found' });
+    }
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
 });
 
-// ===== ChatGPT (streaming) =====
+// Рассуждения
 app.post('/api/chat', authenticate, async (req, res) => {
   const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
-  if (!chatId || !newMessage) return res.status(400).json({ error: 'chatId and newMessage required' });
+
+  if (!chatId || !newMessage) {
+    return res.status(400).json({ error: 'chatId and newMessage required' });
+  }
 
   const settings = await getUserSettings(req.user.id);
   const shouldSave = settings.saveHistory;
-
   let chat = await getChatById(chatId, req.user.id);
-  if (!chat) chat = { id: chatId, title: 'Новый чат', createdAt: new Date().toISOString(), messages: [] };
 
-  if (shouldSave) chat.messages.push({ role: 'user', content: newMessage });
+  if (!chat) {
+    chat = {
+      id: chatId,
+      title: 'Новый чат',
+      createdAt: new Date().toISOString(),
+      messages: []
+    };
+  }
+
+  if (shouldSave) {
+    chat.messages.push({ role: 'user', content: newMessage });
+  }
+
   const openAiMessages = chat.messages.map(msg => ({ role: msg.role, content: msg.content }));
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -373,31 +543,45 @@ app.post('/api/chat', authenticate, async (req, res) => {
     });
 
     let assistantContent = '', assistantReasoning = '';
+
     for await (const chunk of completion) {
       const reasoning = chunk.choices[0]?.delta?.reasoning || chunk.choices[0]?.delta?.reasoning_content;
       const content = chunk.choices[0]?.delta?.content || '';
+
       if (reasoning) {
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ type: 'reasoning', text: reasoning })}\n\n`);
       }
+
       if (content) {
         assistantContent += content;
         res.write(`data: ${JSON.stringify({ type: 'content', text: content })}\n\n`);
       }
     }
+
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
 
     if (shouldSave) {
-      chat.messages.push({ role: 'assistant', content: assistantContent, reasoning: assistantReasoning });
-      if (chat.title === 'Новый чат' && assistantContent.length > 10)
+      chat.messages.push({
+        role: 'assistant',
+        content: assistantContent,
+        reasoning: assistantReasoning
+      });
+
+      if (chat.title === 'Новый чат' && assistantContent.length > 10) {
         chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
+      }
+
       await saveChat(chat, req.user.id);
     }
   } catch (err) {
     console.error(err);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
-    res.end();
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    }
   }
 });
 
