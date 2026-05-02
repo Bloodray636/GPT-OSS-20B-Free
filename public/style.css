@@ -759,3 +759,21 @@ body.light .auth-page {
   text-align: center;
   font-size: 0.85rem;
 }
+.avatar-container {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.user-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  margin-bottom: 0.5rem;
+}
+.settings-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}

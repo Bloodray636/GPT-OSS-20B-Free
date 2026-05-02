@@ -13,23 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ===== OpenAI клиент =====
-const openai = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: 'https://integrate.api.nvidia.com/v1',
-  timeout: 120000,
-});
-
-// ===== Middleware =====
-app.use(express.json());
-app.use(express.static('public'));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'default-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 },
-}));
-
 // ===== Константы путей =====
 const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
@@ -102,6 +85,102 @@ const requireAuth = (req, res, next) => {
   res.status(401).json({ error: 'Unauthorized' });
 };
 
+// ===== OpenAI клиент =====
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+  timeout: 120000,
+});
+
+// ===== Middleware =====
+app.use(express.json());
+app.use(express.static('public'));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'default-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 },
+}));
+
+// ===== Multer настройка для аватаров =====
+const AVATAR_FIELD = 'avatar';
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const username = req.session.user.username;
+    const userAvatarDir = path.join(DATA_DIR, 'users', username, 'avatar');
+    await ensureDir(userAvatarDir);
+    cb(null, userAvatarDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `avatar${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Неподдерживаемый формат файла'), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter
+});
+
+// ===== Функция поиска файла аватара =====
+async function findAvatarFile(username) {
+  const userDir = path.join(DATA_DIR, 'users', username);
+  const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+  for (const ext of extensions) {
+    const filePath = path.join(userDir, `avatar${ext}`);
+    try {
+      await fs.access(filePath);
+      return filePath;
+    } catch {}
+  }
+  return null;
+}
+
+// ===== Эндпоинты аватаров =====
+app.post('/api/user/avatar', requireAuth, upload.single(AVATAR_FIELD), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Файл не загружен' });
+  }
+  res.json({ success: true, filename: req.file.filename });
+});
+
+app.get('/api/user/avatar', requireAuth, async (req, res) => {
+  const username = req.session.user.username;
+  const avatarPath = await findAvatarFile(username);
+  if (avatarPath) {
+    try {
+      await fs.access(avatarPath);
+      res.sendFile(avatarPath);
+    } catch {
+      res.status(404).json({ error: 'Avatar not found' });
+    }
+  } else {
+    res.status(404).json({ error: 'Avatar not found' });
+  }
+});
+
+app.delete('/api/user/avatar', requireAuth, async (req, res) => {
+  const username = req.session.user.username;
+  const avatarPath = await findAvatarFile(username);
+  if (avatarPath) {
+    await fs.unlink(avatarPath);
+  }
+  res.json({ success: true });
+});
+
+// ===== Аутентификационные маршруты =====
 // Регистрация
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
@@ -203,7 +282,6 @@ app.delete('/api/auth/delete-account', requireAuth, async (req, res) => {
   const { password } = req.body;
   const username = req.session.user.username;
 
-  // Проверяем пароль
   const users = await readJSON(USERS_FILE, {});
   const hash = users[username];
   if (!hash) return res.status(401).json({ error: 'User not found' });

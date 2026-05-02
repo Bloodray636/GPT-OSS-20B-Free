@@ -16,8 +16,12 @@
       </div>
       <ul id="chatList" class="chat-list"></ul>
       <div class="sidebar-footer">
-        <div class="user-info">
-          <span>👤 <span id="sidebarUsername"></span></span>
+        <!-- Блок аватара и имени пользователя -->
+        <div class="avatar-container">
+          <img id="userAvatar" class="user-avatar" src="/default-avatar.svg" alt="Аватар">
+          <div class="user-info">
+            <span>👤 <span id="sidebarUsername"></span></span>
+          </div>
         </div>
         <button id="settingsBtn" class="icon-btn">Настройки</button>
         <button id="logoutBtn" class="icon-btn">Выйти</button>
@@ -42,6 +46,7 @@
       </div>
     </main>
   </div>
+
   <!-- Модальное окно настроек -->
   <div id="settingsModal" class="modal">
     <div class="modal-content">
@@ -55,6 +60,13 @@
 
       <div class="settings-section">
         <h4>Профиль</h4>
+        <!-- Строка с аватаром -->
+        <div class="settings-row">
+          <span>Аватар:</span>
+          <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
+          <button id="changeAvatarBtn" class="small-btn">Сменить</button>
+          <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display: none;">
+        </div>
         <div class="settings-row">
           <span>Никнейм:</span>
           <span id="currentUsername"></span>
@@ -169,6 +181,7 @@
       <div id="deleteAccountError" class="error-message"></div>
     </div>
   </div>
+
   <script src="client.js"></script>
 </body>
 </html>
