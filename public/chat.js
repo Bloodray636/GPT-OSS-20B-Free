@@ -764,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   DOM.sendBtn?.addEventListener('click', sendMessage);
   DOM.stopBtn?.addEventListener('click', stopGeneration);
-  
+
   DOM.userInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -776,3 +776,24 @@ document.addEventListener('DOMContentLoaded', () => {
   initPasswordToggles();
   checkAuth();
 });
+
+// Бургер-меню и оверлей (мобильная версия)
+const burgerMenu = document.getElementById('burgerMenu');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+if (burgerMenu && sidebar && sidebarOverlay) {
+    const toggleSidebar = () => {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('active');
+    };
+    burgerMenu.addEventListener('click', toggleSidebar);
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+
+    // При изменении размера окна на широкое (десктоп) закрываем панель
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
+        toggleSidebar();
+        }
+    });
+}

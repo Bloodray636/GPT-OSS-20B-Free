@@ -947,3 +947,67 @@ body.light .auth-page {
     margin-top: 0.3rem;
   }
 }
+
+@media (max-width: 768px) {
+  /* Увеличиваем отступы снизу, чтобы поле ввода не прилипало к клавиатуре */
+  body {
+    position: relative;
+    height: 100%;
+  }
+
+  .input-area {
+    padding: 0.8rem 1rem;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  #userInput {
+    font-size: 16px; /* предотвращает масштабирование на iOS */
+    padding: 0.7rem 1rem;
+    min-height: 48px;
+  }
+
+  button#sendBtn, button#stopBtn {
+    padding: 0.5rem 1.2rem;
+    min-width: 70px;
+  }
+
+  /* Увеличиваем отступы для сообщений */
+  .chat-container {
+    padding-bottom: 0.8rem;
+  }
+
+  .bubble, .content-block {
+    font-size: 1rem;
+  }
+
+  /* Улучшаем кнопки в модалках */
+  .modal-content button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Для очень маленьких экранов (до 480px) */
+@media (max-width: 480px) {
+  .chat-header {
+    flex-wrap: wrap;
+  }
+  .chat-controls {
+    width: 100%;
+    margin-top: 0.3rem;
+  }
+  select {
+    width: 100%;
+  }
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .settings-row button {
+    width: 100%;
+  }
+}
