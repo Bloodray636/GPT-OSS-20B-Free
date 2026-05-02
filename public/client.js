@@ -101,6 +101,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const burgerMenu = document.getElementById('burgerMenu');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+  if (burgerMenu && sidebar && sidebarOverlay) {
+    const toggleSidebar = () => {
+      sidebar.classList.toggle('open');
+      sidebarOverlay.classList.toggle('active');
+    };
+
+    burgerMenu.addEventListener('click', toggleSidebar);
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+
+    // При изменении размера окна, если ширина > 768px — закрыть панель (на случай переворота экрана)
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
+        toggleSidebar();
+      }
+    });
+  }
+
   // Показ пароля
   document.querySelectorAll('.toggle-password').forEach(btn => {
     btn.addEventListener('click', () => {
