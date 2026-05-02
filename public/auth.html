@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход / Регистрация | GPT-OSS-20B</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark auth-page">
+  <div class="auth-container">
+    <!-- Форма входа -->
+    <div id="loginForm" class="auth-card">
+      <h1>GPT-OSS-20B</h1>
+      <div class="sub">Вход в аккаунт</div>
+      <input type="text" id="loginUsername" placeholder="Имя пользователя" autocomplete="off">
+      <div class="input-group">
+        <input type="password" id="loginPassword" placeholder="Пароль">
+        <span class="toggle-password" data-target="loginPassword">👁️</span>
+      </div>
+      <button id="loginBtn">Войти</button>
+      <div class="auth-switch">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></div>
+      <div id="loginError" class="auth-error"></div>
+    </div>
+
+    <!-- Форма регистрации -->
+    <div id="registerForm" class="auth-card" style="display: none;">
+      <h1>GPT-OSS-20B</h1>
+      <div class="sub">Создайте аккаунт</div>
+      <input type="text" id="regUsername" placeholder="Имя (буквы, цифры, _)" autocomplete="off">
+      <div class="input-group">
+        <input type="password" id="regPassword" placeholder="Пароль (мин. 6 символов)">
+        <span class="toggle-password" data-target="regPassword">👁️</span>
+      </div>
+      <div class="input-group">
+        <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
+        <span class="toggle-password" data-target="regPasswordConfirm">👁️</span>
+      </div>
+      <button id="registerBtn">Зарегистрироваться</button>
+      <div class="auth-switch">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></div>
+      <div id="registerError" class="auth-error"></div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>
