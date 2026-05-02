@@ -959,8 +959,9 @@ body.light .auth-page {
     padding: 0.8rem 1rem;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
-    position: sticky;
+    position: absolute;
     bottom: 0;
+    width: 100%;
     z-index: 10;
   }
 
