@@ -1,6 +1,9 @@
 // public/client.js
 
-// Состояния
+// ===== Глобальный токен аутентификации =====
+let authToken = localStorage.getItem('auth_token');
+
+// ===== Состояния =====
 const state = {
   currentUser: null,
   currentChatId: null,
@@ -26,7 +29,7 @@ const state = {
   },
 };
 
-// DOM элементы
+// ===== DOM элементы =====
 const DOM = {
   chatContainer: document.getElementById('chatContainer'),
   userInput: document.getElementById('userInput'),
@@ -81,66 +84,17 @@ const DOM = {
   avatarInput: document.getElementById('avatarInput'),
 };
 
-// Утилиты
+// ===== Утилиты =====
 const escapeHtml = (str) => str.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 const scrollToBottom = () => DOM.chatContainer.scrollTop = DOM.chatContainer.scrollHeight;
 
-// ===== Аватар пользователя =====
-const loadAvatar = async () => {
-  try {
-    const res = await fetch('/api/user/avatar');
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (DOM.userAvatar) DOM.userAvatar.src = url;
-      if (DOM.settingsAvatar) DOM.settingsAvatar.src = url;
-    } else {
-      // заглушка
-      if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
-      if (DOM.settingsAvatar) DOM.settingsAvatar.src = '/default-avatar.svg';
-    }
-  } catch (err) {
-    console.error('Ошибка загрузки аватара', err);
-  }
-};
-
-const uploadAvatar = async (file) => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-  try {
-    const res = await fetch('/api/user/avatar', {
-      method: 'POST',
-      body: formData,
-    });
-    if (res.ok) {
-      showInfoModal('Успех', 'Аватар обновлён');
-      await loadAvatar();
-    } else {
-      const data = await res.json();
-      showInfoModal('Ошибка', data.error || 'Не удалось загрузить аватар');
-    }
-  } catch (err) {
-    showInfoModal('Ошибка', 'Ошибка соединения');
-  }
-};
-
-const deleteAvatar = async () => {
-  try {
-    const res = await fetch('/api/user/avatar', { method: 'DELETE' });
-    if (res.ok) {
-      showInfoModal('Успех', 'Аватар удалён');
-      if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
-      if (DOM.settingsAvatar) DOM.settingsAvatar.src = '/default-avatar.svg';
-    } else {
-      showInfoModal('Ошибка', 'Не удалось удалить аватар');
-    }
-  } catch {
-    showInfoModal('Ошибка', 'Ошибка соединения');
-  }
-};
-
+// fetchJSON с авторизацией
 const fetchJSON = async (url, options = {}) => {
-  const res = await fetch(url, options);
+  const headers = options.headers || {};
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  const res = await fetch(url, { ...options, headers });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 };
@@ -159,7 +113,7 @@ const closeAllModals = () => {
   modals.forEach(modal => { if (modal) modal.style.display = 'none'; });
 };
 
-// Информационное модальное окно (вместо alert)
+// Информационное модальное окно
 const showInfoModal = (title, message) => {
   DOM.infoTitle.textContent = title;
   DOM.infoMessage.textContent = message;
@@ -217,21 +171,21 @@ if (DOM.renameSaveBtn) DOM.renameSaveBtn.onclick = async () => {
   state.modals.renameChatId = null;
 };
 
-// Настройки и тема
+// ===== Настройки и тема =====
 const applyTheme = (theme) => {
   document.body.classList.toggle('dark', theme === 'dark');
   document.body.classList.toggle('light', theme === 'light');
 };
 
 const loadSettings = async () => {
-  const res = await fetch('/api/settings');
-  state.settings = await res.json();
+  const res = await fetchJSON('/api/settings');
+  state.settings = res;
   DOM.saveHistoryToggle.checked = state.settings.saveHistory;
   DOM.themeToggle.checked = state.settings.theme === 'dark';
 };
 
 const saveSettings = async (theme, saveHistory) => {
-  await fetch('/api/settings', {
+  await fetchJSON('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ theme, saveHistory }),
@@ -240,7 +194,62 @@ const saveSettings = async (theme, saveHistory) => {
   applyTheme(theme);
 };
 
-// Управление чатами
+// ===== Аватар (через JSON) =====
+const loadAvatar = async () => {
+  try {
+    const res = await fetchJSON('/api/user/avatar');
+    if (res.url) {
+      DOM.userAvatar.src = res.url;
+      DOM.settingsAvatar.src = res.url;
+    } else {
+      DOM.userAvatar.src = '/default-avatar.svg';
+      DOM.settingsAvatar.src = '/default-avatar.svg';
+    }
+  } catch {
+    DOM.userAvatar.src = '/default-avatar.svg';
+    DOM.settingsAvatar.src = '/default-avatar.svg';
+  }
+};
+
+const uploadAvatar = async (file) => {
+  // Загружаем файл напрямую в Supabase Storage (используем клиентский Supabase)
+  const supabaseUrl = 'https://ваш_проект.supabase.co'; // нужно заменить на реальный URL
+  const supabaseAnonKey = 'ваш_anon_ключ'; // заменить
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `avatars/${Date.now()}.${fileExt}`;
+
+  // Загружаем в bucket "avatars"
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, file, { upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(fileName);
+
+  // Сохраняем ссылку в профиле через API
+  const res = await fetchJSON('/api/user/avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatarUrl: publicUrl }),
+  });
+  if (!res.success) throw new Error();
+
+  showInfoModal('Успех', 'Аватар обновлён');
+  await loadAvatar();
+};
+
+const deleteAvatar = async () => {
+  await fetchJSON('/api/user/avatar', { method: 'DELETE' });
+  await loadAvatar();
+  showInfoModal('Успех', 'Аватар удалён');
+};
+
+// ===== Управление чатами =====
 const renderChatList = () => {
   DOM.chatList.innerHTML = '';
   state.chats.forEach(chat => {
@@ -282,19 +291,19 @@ const renderChatList = () => {
 };
 
 const loadChats = async () => {
-  const res = await fetch('/api/chats?_=' + Date.now());
-  state.chats = await res.json();
+  const res = await fetchJSON('/api/chats?_=' + Date.now());
+  state.chats = res;
   renderChatList();
 };
 
 const renameChatById = async (chatId, newTitle) => {
   try {
-    const res = await fetch(`/api/chats/${chatId}`, {
+    const res = await fetchJSON(`/api/chats/${chatId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newTitle }),
     });
-    if (res.ok) {
+    if (res.success) {
       const chat = state.chats.find(c => c.id === chatId);
       if (chat) chat.title = newTitle;
       renderChatList();
@@ -309,7 +318,7 @@ const renameChatById = async (chatId, newTitle) => {
 
 const deleteChatConfirm = (chatId) => {
   showConfirm('Удалить чат', 'Вы уверены, что хотите удалить этот чат?', async () => {
-    const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+    const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
     if (res.ok) {
       state.chats = state.chats.filter(c => c.id !== chatId);
       renderChatList();
@@ -360,7 +369,7 @@ const openChat = async (chatId) => {
   }
 };
 
-// Отображение сообщений
+// ===== Отображение сообщений =====
 const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
@@ -423,10 +432,9 @@ const applyEditMessage = async (messageDiv, newText) => {
   const index = allMessages.indexOf(messageDiv);
   if (index === -1) return;
 
-  // 1. Обрезаем историю на сервере (удаляем текущее сообщение и все после него)
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
     body: JSON.stringify({ keepIndex: index - 1 }),
   });
 
@@ -435,10 +443,7 @@ const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
-  // 2. Даём серверу время на запись файла
   await new Promise(resolve => setTimeout(resolve, 200));
-
-  // 3. Перезагружаем страницу (полное обновление состояния)
   showInfoModal('Успех', 'Сообщение изменено. Страница будет перезагружена.');
   setTimeout(() => location.reload(), 1000);
 };
@@ -457,7 +462,7 @@ const generateNewResponse = async (userMessage) => {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({
         chatId: state.currentChatId,
         newMessage: userMessage,
@@ -522,7 +527,7 @@ const stopGeneration = () => {
   }
 };
 
-// Настройки профиля
+// ===== Настройки профиля =====
 const changePassword = async () => {
   const oldPwd = DOM.oldPasswordInput.value;
   const newPwd = DOM.newPasswordInput.value;
@@ -542,19 +547,18 @@ const changePassword = async () => {
   }
 
   try {
-    const res = await fetch('/api/auth/change-password', {
+    const res = await fetchJSON('/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
     });
-    const data = await res.json();
-    if (res.ok) {
+    if (res.success) {
       showInfoModal('Успех', 'Пароль успешно изменён');
       closeAllModals();
       DOM.passwordError.textContent = '';
       DOM.oldPasswordInput.value = DOM.newPasswordInput.value = DOM.confirmPasswordInput.value = '';
     } else {
-      DOM.passwordError.textContent = data.error || 'Ошибка';
+      DOM.passwordError.textContent = res.error || 'Ошибка';
     }
   } catch {
     DOM.passwordError.textContent = 'Ошибка соединения';
@@ -573,13 +577,12 @@ const changeUsername = async () => {
   }
 
   try {
-    const res = await fetch('/api/auth/change-username', {
+    const res = await fetchJSON('/api/auth/change-username', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newUsername: newName }),
     });
-    const data = await res.json();
-    if (res.ok) {
+    if (res.success) {
       showInfoModal('Успех', `Никнейм изменён на ${newName}`);
       closeAllModals();
       DOM.usernameError.textContent = '';
@@ -588,52 +591,36 @@ const changeUsername = async () => {
       if (DOM.currentUsernameSpan) DOM.currentUsernameSpan.textContent = newName;
       DOM.newUsernameInput.value = '';
     } else {
-      DOM.usernameError.textContent = data.error || 'Ошибка';
+      DOM.usernameError.textContent = res.error || 'Ошибка';
     }
   } catch {
     DOM.usernameError.textContent = 'Ошибка соединения';
   }
 };
 
-// Удаление всех чатов через точечные запросы
 const deleteAllChats = () => {
-  showConfirm('Удалить все чаты', 'Вы уверены, что хотите удалить ВСЕ чаты? Это действие необратимо.', async () => {
+  showConfirm('Удалить все чаты', 'Вы уверены, что хотите удалить ВСЕ чаты?', async () => {
     try {
-      // Удаляем каждый чат по очереди (используем копию массива, так как он будет меняться)
       const chatsToDelete = [...state.chats];
       for (const chat of chatsToDelete) {
-        const res = await fetch(`/api/chats/${chat.id}`, { method: 'DELETE' });
-        if (!res.ok) {
-          console.warn(`Не удалось удалить чат ${chat.id}`);
-        }
+        const res = await fetch(`/api/chats/${chat.id}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+        if (!res.ok) console.warn(`Не удалось удалить чат ${chat.id}`);
       }
-
-      // Принудительно очищаем состояние
       state.chats = [];
       state.currentChatId = null;
       renderChatList();
       DOM.chatContainer.innerHTML = '';
       DOM.currentChatTitle.textContent = '';
-
-      // Загружаем свежий список с сервера (должен быть пустым)
       await loadChats();
-
-      // Создаём новый чат
-      if (state.chats.length === 0) {
-        await createNewChat();
-      } else {
-        await openChat(state.chats[0].id);
-      }
-
+      if (state.chats.length === 0) await createNewChat();
+      else await openChat(state.chats[0].id);
       showInfoModal('Готово', 'Все чаты удалены');
     } catch (err) {
-      console.error(err);
       showInfoModal('Ошибка', 'Не удалось удалить все чаты');
     }
   });
 };
 
-// Удаление аккаунта через модальное окно
 if (DOM.cancelDeleteAccountBtn) DOM.cancelDeleteAccountBtn.onclick = () => DOM.deleteAccountModal.style.display = 'none';
 if (DOM.confirmDeleteAccountBtn) {
   DOM.confirmDeleteAccountBtn.onclick = async () => {
@@ -643,17 +630,16 @@ if (DOM.confirmDeleteAccountBtn) {
       return;
     }
     try {
-      const res = await fetch('/api/auth/delete-account', {
+      const res = await fetchJSON('/api/auth/delete-account', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pwd }),
       });
-      if (res.ok) {
+      if (res.success) {
         showInfoModal('Аккаунт удалён', 'Перенаправление...');
         setTimeout(() => window.location.href = '/auth.html', 1500);
       } else {
-        const data = await res.json();
-        DOM.deleteAccountError.textContent = data.error || 'Ошибка удаления';
+        DOM.deleteAccountError.textContent = res.error || 'Ошибка удаления';
       }
     } catch {
       DOM.deleteAccountError.textContent = 'Ошибка соединения';
@@ -661,11 +647,9 @@ if (DOM.confirmDeleteAccountBtn) {
   };
 }
 
-// Инициализация обработчиков
+// ===== Инициализация обработчиков =====
 const initSettingsHandlers = () => {
-  document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
-    DOM.changePasswordModal.style.display = 'flex';
-  });
+  document.getElementById('changePasswordBtn')?.addEventListener('click', () => DOM.changePasswordModal.style.display = 'flex');
   document.getElementById('cancelPasswordBtn')?.addEventListener('click', () => {
     closeAllModals();
     DOM.passwordError.textContent = '';
@@ -673,9 +657,7 @@ const initSettingsHandlers = () => {
   });
   document.getElementById('savePasswordBtn')?.addEventListener('click', changePassword);
 
-  document.getElementById('changeUsernameBtn')?.addEventListener('click', () => {
-    DOM.changeUsernameModal.style.display = 'flex';
-  });
+  document.getElementById('changeUsernameBtn')?.addEventListener('click', () => DOM.changeUsernameModal.style.display = 'flex');
   document.getElementById('cancelUsernameBtn')?.addEventListener('click', () => {
     closeAllModals();
     DOM.usernameError.textContent = '';
@@ -690,9 +672,7 @@ const initSettingsHandlers = () => {
     DOM.deleteAccountError.textContent = '';
   });
   if (DOM.changeAvatarBtn) {
-    DOM.changeAvatarBtn.addEventListener('click', () => {
-      DOM.avatarInput.click();
-    });
+    DOM.changeAvatarBtn.addEventListener('click', () => DOM.avatarInput.click());
   }
   if (DOM.avatarInput) {
     DOM.avatarInput.addEventListener('change', (e) => {
@@ -714,7 +694,7 @@ const initPasswordToggles = () => {
   });
 };
 
-// Проверка авторизации
+// ===== Авторизация =====
 const checkAuth = async () => {
   try {
     const data = await fetchJSON('/api/auth/status');
@@ -737,9 +717,8 @@ const checkAuth = async () => {
   }
 };
 
-// Старт приложения
+// ===== Старт приложения =====
 document.addEventListener('DOMContentLoaded', () => {
-  // Кнопка настроек
   if (DOM.settingsBtn) {
     DOM.settingsBtn.onclick = () => {
       DOM.saveHistoryToggle.checked = state.settings.saveHistory;
@@ -755,7 +734,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Закрытие модалок по клику вне области
   window.onclick = (e) => {
     if (e.target === DOM.settingsModal) DOM.settingsModal.style.display = 'none';
     if (e.target === DOM.confirmModal) DOM.confirmModal.style.display = 'none';
@@ -767,10 +745,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === DOM.deleteAccountModal) DOM.deleteAccountModal.style.display = 'none';
   };
 
-  // Основные обработчики событий
   DOM.newChatBtn?.addEventListener('click', createNewChat);
   DOM.logoutBtn?.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+    authToken = null;
+    localStorage.removeItem('auth_token');
     window.location.href = '/auth.html';
   });
   DOM.sendBtn?.addEventListener('click', sendMessage);

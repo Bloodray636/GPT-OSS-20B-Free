@@ -1,358 +1,295 @@
 import 'dotenv/config';
 import express from 'express';
-import session from 'express-session';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import OpenAI from 'openai';
-import fs from 'fs/promises';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// ===== Инициализация =====
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ===== Константы путей =====
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
+// Supabase клиенты
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// ===== Вспомогательные файловые функции =====
-const ensureDir = async (dir) => {
-  try { await fs.access(dir); } catch { await fs.mkdir(dir, { recursive: true }); }
-};
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
-const readJSON = async (filePath, defaultValue = {}) => {
-  try {
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return defaultValue;
-  }
-};
-
-const writeJSON = async (filePath, data) => {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-};
-
-// ===== Работа с пользователями =====
-const getUserDir = (username) => path.join(DATA_DIR, 'users', username);
-const getUserSettingsPath = (username) => path.join(getUserDir(username), 'settings.json');
-const getUserChatsPath = (username) => path.join(getUserDir(username), 'chats.json');
-
-const getUserSettings = async (username) => {
-  const data = await readJSON(getUserSettingsPath(username));
-  return { theme: 'dark', saveHistory: true, ...data };
-};
-
-const saveUserSettings = async (username, settings) => {
-  await ensureDir(getUserDir(username));
-  await writeJSON(getUserSettingsPath(username), settings);
-};
-
-const getUserChats = async (username) => {
-  return await readJSON(getUserChatsPath(username), []);
-};
-
-const saveUserChats = async (username, chats) => {
-  await ensureDir(getUserDir(username));
-  await writeJSON(getUserChatsPath(username), chats);
-};
-
-const getChatById = async (username, chatId) => {
-  const chats = await getUserChats(username);
-  return chats.find(c => c.id === chatId);
-};
-
-const saveChat = async (username, chat) => {
-  let chats = await getUserChats(username);
-  const index = chats.findIndex(c => c.id === chat.id);
-  if (index >= 0) chats[index] = chat;
-  else chats.push(chat);
-  await saveUserChats(username, chats);
-  return chat;
-};
-
-const deleteChat = async (username, chatId) => {
-  let chats = await getUserChats(username);
-  chats = chats.filter(c => c.id !== chatId);
-  await saveUserChats(username, chats);
-};
-
-// ===== Аутентификация =====
-const requireAuth = (req, res, next) => {
-  if (req.session.user) return next();
-  res.status(401).json({ error: 'Unauthorized' });
-};
-
-// ===== OpenAI клиент =====
+// OpenAI
 const openai = new OpenAI({
   apiKey: process.env.NVIDIA_API_KEY,
   baseURL: 'https://integrate.api.nvidia.com/v1',
   timeout: 120000,
 });
 
-// ===== Middleware =====
 app.use(express.json());
 app.use(express.static('public'));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'default-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 },
-}));
 
-// ===== Multer настройка для аватаров =====
-const AVATAR_FIELD = 'avatar';
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const username = req.session.user.username;
-    const userAvatarDir = path.join(DATA_DIR, 'users', username, 'avatar');
-    await ensureDir(userAvatarDir);
-    cb(null, userAvatarDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `avatar${ext}`);
+// Middleware: проверка JWT из заголовка Authorization
+const authenticate = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid token' });
   }
-});
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  req.user = user;
+  next();
+};
 
-const fileFilter = (req, file, cb) => {
-  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Неподдерживаемый формат файла'), false);
+// ===== Вспомогательные функции =====
+const getProfile = async (userId) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const getUserSettings = async (userId) => {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('theme, save_history')
+    .eq('user_id', userId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return { theme: data?.theme || 'dark', saveHistory: data?.save_history !== false };
+};
+
+const saveUserSettings = async (userId, theme, saveHistory) => {
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: userId, theme, save_history: saveHistory }, { onConflict: 'user_id' });
+  if (error) throw error;
+};
+
+const getChats = async (userId) => {
+  const { data, error } = await supabase
+    .from('chats')
+    .select('id, title, created_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+const getChatById = async (chatId, userId) => {
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*')
+    .eq('id', chatId)
+    .eq('user_id', userId)
+    .single();
+  if (error) return null;
+  const { data: messages } = await supabase
+    .from('messages')
+    .select('id, role, content, reasoning, created_at')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+  data.messages = messages || [];
+  return data;
+};
+
+const saveChat = async (chat, userId) => {
+  // Сохраняем или обновляем чат
+  const { error: chatError } = await supabase
+    .from('chats')
+    .upsert(
+      {
+        id: chat.id,
+        user_id: userId,
+        title: chat.title,
+        created_at: chat.createdAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+  if (chatError) throw chatError;
+
+  // Удаляем старые сообщения и добавляем новые
+  const { error: delError } = await supabase
+    .from('messages')
+    .delete()
+    .eq('chat_id', chat.id);
+  if (delError) throw delError;
+
+  if (chat.messages && chat.messages.length) {
+    const messagesToInsert = chat.messages.map(msg => ({
+      chat_id: chat.id,
+      role: msg.role,
+      content: msg.content,
+      reasoning: msg.reasoning || null,
+    }));
+    const { error: insError } = await supabase
+      .from('messages')
+      .insert(messagesToInsert);
+    if (insError) throw insError;
   }
 };
 
-const upload = multer({
-  storage,
-  limits: { fileSize: MAX_FILE_SIZE },
-  fileFilter
-});
+const deleteChat = async (chatId, userId) => {
+  await supabase.from('chats').delete().eq('id', chatId).eq('user_id', userId);
+};
 
-// ===== Функция поиска файла аватара =====
-async function findAvatarFile(username) {
-  const userDir = path.join(DATA_DIR, 'users', username);
-  const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
-  for (const ext of extensions) {
-    const filePath = path.join(userDir, `avatar${ext}`);
-    try {
-      await fs.access(filePath);
-      return filePath;
-    } catch {}
-  }
-  return null;
-}
-
-// ===== Эндпоинты аватаров =====
-app.post('/api/user/avatar', requireAuth, upload.single(AVATAR_FIELD), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Файл не загружен' });
-  }
-  res.json({ success: true, filename: req.file.filename });
-});
-
-app.get('/api/user/avatar', requireAuth, async (req, res) => {
-  const username = req.session.user.username;
-  const avatarPath = await findAvatarFile(username);
-  if (avatarPath) {
-    try {
-      await fs.access(avatarPath);
-      res.sendFile(avatarPath);
-    } catch {
-      res.status(404).json({ error: 'Avatar not found' });
-    }
-  } else {
-    res.status(404).json({ error: 'Avatar not found' });
-  }
-});
-
-app.delete('/api/user/avatar', requireAuth, async (req, res) => {
-  const username = req.session.user.username;
-  const avatarPath = await findAvatarFile(username);
-  if (avatarPath) {
-    await fs.unlink(avatarPath);
-  }
-  res.json({ success: true });
-});
-
-// ===== Аутентификационные маршруты =====
-// Регистрация
+// ===== Auth endpoints =====
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-  if (username.length < 3) return res.status(400).json({ error: 'Min 3 characters' });
-  if (password.length < 6) return res.status(400).json({ error: 'Min 6 characters' });
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Only letters, numbers, underscore' });
+  if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid characters' });
 
-  await ensureDir(DATA_DIR);
-  const users = await readJSON(USERS_FILE, {});
-  if (users[username]) return res.status(409).json({ error: 'Username already exists' });
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: `${username}@temp.local`,
+    password,
+  });
+  if (authError) return res.status(400).json({ error: authError.message });
 
-  users[username] = await bcrypt.hash(password, 10);
-  await writeJSON(USERS_FILE, users);
+  const userId = authData.user.id;
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert({ id: userId, username });
+  if (profileError) {
+    await supabase.auth.admin.deleteUser(userId);
+    return res.status(500).json({ error: 'Failed to create profile' });
+  }
 
-  const userDir = getUserDir(username);
-  await ensureDir(userDir);
-  await writeJSON(getUserChatsPath(username), []);
-  await writeJSON(getUserSettingsPath(username), { theme: 'dark', saveHistory: true });
-
-  req.session.user = { username };
-  res.json({ success: true });
+  await supabase.from('user_settings').insert({ user_id: userId, theme: 'dark', save_history: true });
+  res.json({ success: true, token: authData.session?.access_token });
 });
 
-// Логин
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
-  await ensureDir(DATA_DIR);
-  const users = await readJSON(USERS_FILE, {});
-  const hash = users[username];
-  if (!hash) return res.status(401).json({ error: 'Invalid credentials' });
-  const match = await bcrypt.compare(password, hash);
-  if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-  req.session.user = { username };
-  res.json({ success: true });
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .single();
+  if (!profile) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: `${username}@temp.local`,
+    password,
+  });
+  if (error) return res.status(401).json({ error: 'Invalid credentials' });
+  res.json({ success: true, token: data.session?.access_token });
 });
 
-// Логаут
 app.post('/api/auth/logout', (req, res) => {
-  req.session.destroy();
   res.json({ success: true });
 });
 
-// Статус
-app.get('/api/auth/status', (req, res) => {
-  if (req.session.user) {
-    res.json({ authenticated: true, username: req.session.user.username });
-  } else {
-    res.json({ authenticated: false });
-  }
+app.get('/api/auth/status', authenticate, (req, res) => {
+  res.json({ authenticated: true, username: req.user.email?.split('@')[0] });
 });
 
-// Смена пароля
-app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+app.post('/api/auth/change-password', authenticate, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  const username = req.session.user.username;
+  if (!oldPassword || newPassword.length < 6) return res.status(400).json({ error: 'Invalid password' });
 
-  if (!oldPassword || !newPassword) return res.status(400).json({ error: 'All fields required' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'Min 6 characters' });
+  const { error: signError } = await supabase.auth.signInWithPassword({
+    email: req.user.email,
+    password: oldPassword,
+  });
+  if (signError) return res.status(401).json({ error: 'Old password incorrect' });
 
-  const users = await readJSON(USERS_FILE, {});
-  const hash = users[username];
-  if (!hash) return res.status(401).json({ error: 'User not found' });
-  const match = await bcrypt.compare(oldPassword, hash);
-  if (!match) return res.status(401).json({ error: 'Incorrect old password' });
-  users[username] = await bcrypt.hash(newPassword, 10);
-  await writeJSON(USERS_FILE, users);
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 
-// Смена никнейма
-app.post('/api/auth/change-username', requireAuth, async (req, res) => {
+app.post('/api/auth/change-username', authenticate, async (req, res) => {
   const { newUsername } = req.body;
-  const oldUsername = req.session.user.username;
-
-  if (!newUsername) return res.status(400).json({ error: 'Username required' });
-  if (newUsername.length < 3) return res.status(400).json({ error: 'Min 3 characters' });
+  if (!newUsername || newUsername.length < 3) return res.status(400).json({ error: 'Invalid username' });
   if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) return res.status(400).json({ error: 'Invalid characters' });
-  if (newUsername === oldUsername) return res.status(400).json({ error: 'Same username' });
 
-  const users = await readJSON(USERS_FILE, {});
-  if (users[newUsername]) return res.status(409).json({ error: 'Username already exists' });
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', newUsername)
+    .single();
+  if (existing) return res.status(409).json({ error: 'Username taken' });
 
-  users[newUsername] = users[oldUsername];
-  delete users[oldUsername];
-  await writeJSON(USERS_FILE, users);
-
-  const oldDir = getUserDir(oldUsername);
-  const newDir = getUserDir(newUsername);
-  await fs.rename(oldDir, newDir);
-
-  req.session.user.username = newUsername;
+  const { error } = await supabase
+    .from('profiles')
+    .update({ username: newUsername })
+    .eq('id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, newUsername });
 });
 
-// Удаление аккаунта
-app.delete('/api/auth/delete-account', requireAuth, async (req, res) => {
+app.delete('/api/auth/delete-account', authenticate, async (req, res) => {
   const { password } = req.body;
-  const username = req.session.user.username;
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Admin client not configured' });
+  }
 
-  const users = await readJSON(USERS_FILE, {});
-  const hash = users[username];
-  if (!hash) return res.status(401).json({ error: 'User not found' });
-  const match = await bcrypt.compare(password, hash);
-  if (!match) return res.status(401).json({ error: 'Invalid password' });
+  const { error: signError } = await supabase.auth.signInWithPassword({
+    email: req.user.email,
+    password,
+  });
+  if (signError) return res.status(401).json({ error: 'Invalid password' });
 
-  delete users[username];
-  await writeJSON(USERS_FILE, users);
-
-  const userDir = getUserDir(username);
-  await fs.rm(userDir, { recursive: true, force: true });
-
-  req.session.destroy();
+  await supabase.from('profiles').delete().eq('id', req.user.id);
+  await supabaseAdmin.auth.admin.deleteUser(req.user.id);
   res.json({ success: true });
 });
 
-// ===== Настройки пользователя =====
-app.get('/api/settings', requireAuth, async (req, res) => {
-  const settings = await getUserSettings(req.session.user.username);
+// ===== Настройки =====
+app.get('/api/settings', authenticate, async (req, res) => {
+  const settings = await getUserSettings(req.user.id);
   res.json(settings);
 });
 
-app.post('/api/settings', requireAuth, async (req, res) => {
+app.post('/api/settings', authenticate, async (req, res) => {
   const { theme, saveHistory } = req.body;
-  await saveUserSettings(req.session.user.username, { theme, saveHistory });
+  await saveUserSettings(req.user.id, theme, saveHistory);
   res.json({ success: true });
 });
 
-// ===== Управление чатами =====
-app.get('/api/chats', requireAuth, async (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  const chats = await getUserChats(req.session.user.username);
-  const list = chats.map(c => ({ id: c.id, title: c.title, createdAt: c.createdAt }));
-  res.json(list);
+// ===== Чаты =====
+app.get('/api/chats', authenticate, async (req, res) => {
+  const chats = await getChats(req.user.id);
+  res.json(chats);
 });
 
-app.post('/api/chats', requireAuth, async (req, res) => {
+app.post('/api/chats', authenticate, async (req, res) => {
   const newChat = {
     id: Date.now().toString(),
     title: 'Новый чат',
     createdAt: new Date().toISOString(),
     messages: [],
   };
-  await saveChat(req.session.user.username, newChat);
+  await saveChat(newChat, req.user.id);
   res.json(newChat);
 });
 
-app.delete('/api/chats/:chatId', requireAuth, async (req, res) => {
-  await deleteChat(req.session.user.username, req.params.chatId);
+app.delete('/api/chats/:chatId', authenticate, async (req, res) => {
+  await deleteChat(req.params.chatId, req.user.id);
   res.json({ success: true });
 });
 
-app.put('/api/chats/:chatId', requireAuth, async (req, res) => {
-  const { chatId } = req.params;
+app.put('/api/chats/:chatId', authenticate, async (req, res) => {
   const { title } = req.body;
   if (!title) return res.status(400).json({ error: 'Title required' });
-  const username = req.session.user.username;
-  const chats = await getUserChats(username);
-  const index = chats.findIndex(c => c.id === chatId);
-  if (index === -1) return res.status(404).json({ error: 'Chat not found' });
-  chats[index].title = title;
-  await saveUserChats(username, chats);
-  res.json({ success: true, chat: chats[index] });
+  const { error } = await supabase
+    .from('chats')
+    .update({ title })
+    .eq('id', req.params.chatId)
+    .eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
 });
 
-app.put('/api/chats/:chatId/truncate', requireAuth, async (req, res) => {
-  const { chatId } = req.params;
-  let { keepIndex } = req.body;
-  if (typeof keepIndex !== 'number') return res.status(400).json({ error: 'keepIndex required' });
-  const username = req.session.user.username;
-  let chat = await getChatById(username, chatId);
+app.put('/api/chats/:chatId/truncate', authenticate, async (req, res) => {
+  const { keepIndex } = req.body;
+  const chat = await getChatById(req.params.chatId, req.user.id);
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
   if (keepIndex === -1) {
     chat.messages = [];
@@ -361,28 +298,59 @@ app.put('/api/chats/:chatId/truncate', requireAuth, async (req, res) => {
   } else {
     return res.status(400).json({ error: 'Invalid keepIndex' });
   }
-  await saveChat(username, chat);
+  await saveChat(chat, req.user.id);
   res.json({ success: true });
 });
 
-app.get('/api/chats/:chatId', requireAuth, async (req, res) => {
-  const chat = await getChatById(req.session.user.username, req.params.chatId);
+app.get('/api/chats/:chatId', authenticate, async (req, res) => {
+  const chat = await getChatById(req.params.chatId, req.user.id);
   if (!chat) return res.status(404).json({ error: 'Chat not found' });
   res.json(chat);
 });
 
-// ===== AI чат (streaming) =====
-app.post('/api/chat', requireAuth, async (req, res) => {
-  const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
-  if (!chatId || !newMessage) {
-    return res.status(400).json({ error: 'chatId and newMessage required' });
-  }
+app.delete('/api/chats/all', authenticate, async (req, res) => {
+  const { error } = await supabase
+    .from('chats')
+    .delete()
+    .eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
 
-  const username = req.session.user.username;
-  const settings = await getUserSettings(username);
+// ===== Аватары =====
+app.post('/api/user/avatar', authenticate, async (req, res) => {
+  const { avatarUrl } = req.body;
+  if (!avatarUrl) return res.status(400).json({ error: 'No avatar URL' });
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
+app.get('/api/user/avatar', authenticate, async (req, res) => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('avatar_url')
+    .eq('id', req.user.id)
+    .single();
+  if (data?.avatar_url) {
+    res.json({ url: data.avatar_url });
+  } else {
+    res.status(404).json({ error: 'Not found' });
+  }
+});
+
+// ===== ChatGPT (streaming) =====
+app.post('/api/chat', authenticate, async (req, res) => {
+  const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
+  if (!chatId || !newMessage) return res.status(400).json({ error: 'chatId and newMessage required' });
+
+  const settings = await getUserSettings(req.user.id);
   const shouldSave = settings.saveHistory;
 
-  let chat = await getChatById(username, chatId);
+  let chat = await getChatById(chatId, req.user.id);
   if (!chat) {
     chat = {
       id: chatId,
@@ -396,10 +364,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     chat.messages.push({ role: 'user', content: newMessage });
   }
 
-  const openAiMessages = chat.messages.map(msg => ({
-    role: msg.role,
-    content: msg.content,
-  }));
+  const openAiMessages = chat.messages.map(msg => ({ role: msg.role, content: msg.content }));
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -416,7 +381,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       extra_body: {
         chat_template_kwargs: {
           thinking: true,
-          reasoning_effort: reasoning_effort,
+          reasoning_effort,
         },
       },
     });
@@ -448,7 +413,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       if (chat.title === 'Новый чат' && assistantContent.length > 10) {
         chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
       }
-      await saveChat(username, chat);
+      await saveChat(chat, req.user.id);
     }
   } catch (err) {
     console.error(err);
@@ -457,16 +422,6 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 });
 
-// ===== Запуск сервера =====
-const init = async () => {
-  await ensureDir(DATA_DIR);
-  const users = await readJSON(USERS_FILE, {});
-  if (Object.keys(users).length === 0) {
-    const hash = await bcrypt.hash('admin', 10);
-    await writeJSON(USERS_FILE, { admin: hash });
-    console.log('✅ Создан пользователь admin / admin');
-  }
-  app.listen(port, () => console.log(`✅ Сервер запущен: http://localhost:${port}`));
-};
-
-init();
+app.listen(port, () => {
+  console.log(`✅ Server running on http://localhost:${port}`);
+});
