@@ -117,53 +117,77 @@ const deleteChat = async (chatId, userId) => {
 
 // ===== Auth endpoints =====
 app.post('/api/auth/register', async (req, res) => {
-  console.log('📝 Registration attempt:', req.body);
+  console.log('REGISTER: Request received', { body: req.body });
+  const { username, email, password } = req.body;
+  
+  // Валидация
+  if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
+
   try {
+    // Проверяем наличие admin клиента
     if (!supabaseAdmin) {
-      throw new Error('Admin client not configured! Check SUPABASE_SERVICE_ROLE_KEY.');
+      console.error('REGISTER ERROR: supabaseAdmin is not available');
+      return res.status(500).json({ error: 'Server misconfiguration' });
     }
-    const { username, email, password } = req.body;
 
-    // Валидация
-    if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
-    if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
-
-    // Создание пользователя
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    console.log('REGISTER: Creating user via admin API...');
+    const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { username }
     });
-    if (authError) {
-      // Если пользователь уже существует — пытаемся войти
-      if (authError.message.includes('already been registered')) {
+    if (createError) {
+      console.error('REGISTER: Admin createUser error', createError);
+      if (createError.message.includes('already been registered')) {
+        // Пробуем войти
         const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signError) return res.status(409).json({ error: 'User already exists, invalid credentials' });
+        if (signError) return res.status(409).json({ error: 'User exists but wrong credentials' });
         return res.json({ success: true, token: signData.session?.access_token });
       }
-      throw new Error(authError.message);
+      throw new Error(createError.message);
     }
-
+    
+    if (!authData.user) {
+      console.error('REGISTER: No user returned from admin create');
+      throw new Error('User not created');
+    }
     const userId = authData.user.id;
-    // Настройки (игнорируем ошибку, если таблицы нет)
-    await supabase.from('user_settings').upsert(
-      { user_id: userId, theme: 'dark', save_history: true },
-      { onConflict: 'user_id' }
-    ).catch(err => console.warn('Settings not saved:', err.message));
+    console.log(`REGISTER: User created with ID ${userId}`);
 
-    // Создаём сессию
-    const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signError) {
-      console.warn('SignIn after creation failed:', signError.message);
-      return res.json({ success: true }); // Пользователь создан, но войти не смогли
+    // Попытка добавить настройки (не критично)
+    try {
+      const { error: settingsError } = await supabase
+        .from('user_settings')
+        .upsert({ user_id: userId, theme: 'dark', save_history: true }, { onConflict: 'user_id' });
+      if (settingsError) console.warn('REGISTER: settings upsert warning', settingsError);
+      else console.log('REGISTER: settings upsert OK');
+    } catch (errSettings) {
+      console.warn('REGISTER: settings exception', errSettings);
     }
-    res.json({ success: true, token: signData.session?.access_token });
+
+    // Получение токена
+    let token = null;
+    try {
+      const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signError) {
+        console.warn('REGISTER: signIn after creation failed', signError);
+      } else {
+        token = signData.session?.access_token;
+        console.log('REGISTER: signIn OK, token obtained');
+      }
+    } catch (errSign) {
+      console.warn('REGISTER: signIn exception', errSign);
+    }
+
+    // Ответ
+    return res.json({ success: true, token });
   } catch (err) {
-    console.error('🔥 Registration error:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('REGISTER: Unhandled error', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 
