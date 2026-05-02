@@ -1012,3 +1012,28 @@ body.light .auth-page {
     width: 100%;
   }
 }
+
+@media (max-width: 768px) {
+  .input-area {
+    padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
+    margin-bottom: 0;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-secondary);
+    z-index: 10;
+  }
+
+  /* Дополнительная защита для браузеров, которые не поддерживают env */
+  @supports not (padding-bottom: env(safe-area-inset-bottom)) {
+    .input-area {
+      padding-bottom: 1.2rem;
+    }
+  }
+}
+
+/* Если системные кнопки всё ещё перекрывают, можно добавить резервный отступ для Android */
+@media (max-width: 768px) and (pointer: coarse) {
+  .input-area {
+    padding-bottom: 1.4rem;
+  }
+}
