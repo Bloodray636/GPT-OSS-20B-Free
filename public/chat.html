@@ -32,34 +32,24 @@
       <div class="chat-header">
         <button id="burgerMenu" class="burger-menu" aria-label="Меню">☰</button>
         <h3 id="currentChatTitle"></h3>
-        <div class="chat-controls">
-          <select id="reasoningSelect">
-            <option value="low">Усилие: низкое</option>
-            <option value="medium" selected>Усилие: среднее</option>
-            <option value="high">Усилие: высокое</option>
-          </select>
-        </div>
       </div>
       <div class="chat-container" id="chatContainer"></div>
       <div class="input-area">
         <textarea id="userInput" rows="1" placeholder="Сообщение... (Enter отправить)"></textarea>
-        <div class="input-controls">
+        <div class="input-actions">
           <select id="reasoningSelect">
             <option value="low">Усилие: низкое</option>
             <option value="medium" selected>Усилие: среднее</option>
             <option value="high">Усилие: высокое</option>
           </select>
-          <button id="sendBtn" aria-label="Отправить">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-          <button id="stopBtn" style="display: none;" aria-label="Стоп">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-            </svg>
-          </button>
+          <div class="action-buttons">
+            <button id="sendBtn" aria-label="Отправить">
+              <svg>...</svg>
+            </button>
+            <button id="stopBtn" style="display: none;" aria-label="Стоп">
+              <svg>...</svg>
+            </button>
+          </div>
         </div>
       </div>
     </main>

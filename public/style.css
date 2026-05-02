@@ -350,28 +350,48 @@ input:focus, textarea:focus {
 /* ========== Поле ввода ========== */
 .input-area {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 0.8rem;
   padding: 1rem 1.5rem;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
 }
+
 #userInput {
   flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 0.8rem 1.2rem;
+  font-size: 0.95rem;
+  min-height: 44px;
+  max-height: 150px;
 }
-.input-controls {
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+#reasoningSelect {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.action-buttons {
   display: flex;
   gap: 0.6rem;
   align-items: center;
 }
-#reasoningSelect {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 40px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
+
 #sendBtn, #stopBtn {
   display: flex;
   align-items: center;
@@ -383,6 +403,7 @@ input:focus, textarea:focus {
   width: 40px;
   height: 40px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 #sendBtn:hover, #stopBtn:hover {
   background: var(--accent-hover);
@@ -394,13 +415,17 @@ input:focus, textarea:focus {
 #stopBtn:hover {
   background: var(--danger-hover);
 }
+
 @media (max-width: 768px) {
-  .input-controls {
-    gap: 0.4rem;
+  .input-area {
+    padding: 0.8rem 1rem;
+  }
+  .input-row {
+    gap: 0.6rem;
   }
   #reasoningSelect {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.7rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
   }
   #sendBtn, #stopBtn {
     width: 36px;
