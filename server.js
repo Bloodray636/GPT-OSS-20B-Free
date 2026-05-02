@@ -118,40 +118,53 @@ const deleteChat = async (chatId, userId) => {
 // ===== Auth endpoints =====
 app.post('/api/auth/register', async (req, res) => {
   const { username, email, password } = req.body;
-  
-  // Проверки
+
+  // Валидация
   if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
   if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
   if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
 
-  // Административное создание пользователя (без отправки письма)
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: email,
-    password: password,
-    email_confirm: true,            // 👈 подтверждаем email сразу
-    user_metadata: { username }
-  });
-  if (authError) return res.status(400).json({ error: authError.message });
+  try {
+    // 1. Создаём пользователя с подтверждённым email
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true,
+      user_metadata: { username }
+    });
+    if (authError) throw new Error(`Admin create user failed: ${authError.message}`);
 
-  const userId = authData.user.id;
-  // Создаём настройки (таблица user_settings)
-  await supabase.from('user_settings').upsert(
-    { user_id: userId, theme: 'dark', save_history: true },
-    { onConflict: 'user_id' }
-  ).catch(err => console.error('Settings error:', err));
+    const userId = authData.user.id;
 
-  // После создания пользователя нужно сгенерировать для него сессию (токен)
-  const { data: session, error: signError } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
-  if (signError) {
-    // Если не удалось залогинить – возвращаем успех, но без токена (пусть логинится сам)
-    return res.json({ success: true });
+    // 2. Создаём настройки пользователя (user_settings)
+    const { error: settingsError } = await supabase
+      .from('user_settings')
+      .upsert({ user_id: userId, theme: 'dark', save_history: true }, { onConflict: 'user_id' });
+    if (settingsError) {
+      console.error('Settings insert error:', settingsError);
+      // Не прерываем выполнение, но логируем
+    }
+
+    // 3. Создаём сессию для пользователя (чтобы получить токен)
+    const { data: signInData, error: signError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+    if (signError) {
+      console.error('Sign in after creation error:', signError);
+    }
+
+    const token = signInData?.session?.access_token;
+    if (!token) {
+      console.warn('No token generated, but user created');
+    }
+
+    res.json({ success: true, token: token });
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
-
-  res.json({ success: true, token: session.session?.access_token });
 });
 
 app.post('/api/auth/login', async (req, res) => {
