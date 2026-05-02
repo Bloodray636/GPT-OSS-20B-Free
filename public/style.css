@@ -349,42 +349,63 @@ input:focus, textarea:focus {
 
 /* ========== Поле ввода ========== */
 .input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
   padding: 1rem 1.5rem;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
-  display: flex;
-  gap: 0.8rem;
-  align-items: flex-end;
 }
 #userInput {
   flex: 1;
+}
+.input-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+#reasoningSelect {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 32px;
-  padding: 0.8rem 1.2rem;
-  font-size: 0.95rem;
-  min-height: 44px;
-  max-height: 150px;
+  border-radius: 40px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 #sendBtn, #stopBtn {
-  border-radius: 40px;
-  padding: 0.6rem 1.6rem;
-  font-weight: 600;
-}
-#sendBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
-  color: white;
+  border: none;
+  border-radius: 40px;
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
 }
-#sendBtn:hover {
+#sendBtn:hover, #stopBtn:hover {
   background: var(--accent-hover);
   transform: scale(1.02);
 }
 #stopBtn {
   background: var(--danger);
-  color: white;
 }
 #stopBtn:hover {
   background: var(--danger-hover);
+}
+@media (max-width: 768px) {
+  .input-controls {
+    gap: 0.4rem;
+  }
+  #reasoningSelect {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+  #sendBtn, #stopBtn {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 /* ========== Модальные окна ========== */
