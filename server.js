@@ -118,26 +118,40 @@ const deleteChat = async (chatId, userId) => {
 // ===== Auth endpoints =====
 app.post('/api/auth/register', async (req, res) => {
   const { username, email, password } = req.body;
+  
+  // Проверки
   if (!username || username.length < 3) return res.status(400).json({ error: 'Invalid username' });
   if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
   if (!/^[a-zA-Z0-9_]+$/.test(username)) return res.status(400).json({ error: 'Invalid chars' });
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
 
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  // Административное создание пользователя (без отправки письма)
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: email,
-    password,
-    options: { data: { username } } // передаём username в метаданные
+    password: password,
+    email_confirm: true,            // 👈 подтверждаем email сразу
+    user_metadata: { username }
   });
   if (authError) return res.status(400).json({ error: authError.message });
 
-  // Профиль создаст триггер, а настройки создадим здесь
   const userId = authData.user.id;
+  // Создаём настройки (таблица user_settings)
   await supabase.from('user_settings').upsert(
     { user_id: userId, theme: 'dark', save_history: true },
     { onConflict: 'user_id' }
   ).catch(err => console.error('Settings error:', err));
 
-  res.json({ success: true, token: authData.session?.access_token });
+  // После создания пользователя нужно сгенерировать для него сессию (токен)
+  const { data: session, error: signError } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+  if (signError) {
+    // Если не удалось залогинить – возвращаем успех, но без токена (пусть логинится сам)
+    return res.json({ success: true });
+  }
+
+  res.json({ success: true, token: session.session?.access_token });
 });
 
 app.post('/api/auth/login', async (req, res) => {
