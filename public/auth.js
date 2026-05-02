@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // DOM элементы
   const loginFormDiv = document.getElementById('loginForm');
   const registerFormDiv = document.getElementById('registerForm');
   const showRegisterLink = document.getElementById('showRegister');
@@ -29,10 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loginBtn.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
+
     if (!email || !password) {
       loginError.textContent = 'Заполните все поля';
       return;
     }
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -40,8 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
+
       if (res.ok) {
-        localStorage.setItem('auth_token', data.token);
+        if (data.token) localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
       } else {
         loginError.textContent = data.error || 'Ошибка входа';
@@ -57,22 +61,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
+
     if (!username || !email || !password || !confirm) {
       registerError.textContent = 'Заполните все поля';
       return;
     }
+
     if (password !== confirm) {
       registerError.textContent = 'Пароли не совпадают';
       return;
     }
+
     if (password.length < 6) {
       registerError.textContent = 'Пароль должен быть не менее 6 символов';
       return;
     }
+
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       registerError.textContent = 'Имя: только буквы, цифры, подчеркивание';
       return;
     }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -80,8 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ username, email, password })
       });
       const data = await res.json();
+
       if (res.ok) {
-        localStorage.setItem('auth_token', data.token);
+        if (data.token) localStorage.setItem('auth_token', data.token);
         window.location.href = '/chat.html';
       } else {
         registerError.textContent = data.error || 'Ошибка регистрации';
