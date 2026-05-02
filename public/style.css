@@ -622,43 +622,188 @@ input:focus, textarea:focus {
   margin: 1rem 0;
 }
 
-/* ========== Адаптивность ========== */
+/* ========== АДАПТИВНОСТЬ (ТЕЛЕФОНЫ) ========== */
 @media (max-width: 768px) {
+  /* Боковая панель и бургер */
+  .burger-menu {
+    display: inline-block;
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+  }
   .sidebar {
     position: fixed;
     left: -280px;
     top: 0;
-    height: 100%;
+    bottom: 0;
+    width: 280px;
     z-index: 20;
-    transition: left 0.2s;
+    transition: left 0.25s ease;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
   }
   .sidebar.open {
     left: 0;
   }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+  }
+
+  /* Основная область */
   .main {
     width: 100%;
-  }
-  .message {
-    max-width: 95%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
   .chat-header {
     padding: 0.8rem 1rem;
+    gap: 0.5rem;
   }
+  #currentChatTitle {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1rem;
+  }
+  .chat-controls {
+    margin-left: auto;
+  }
+
+  /* Контейнер чата – растягивается на всё свободное место */
+  .chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    gap: 1rem;
+    padding-bottom: 0.8rem;
+  }
+
+  /* Поле ввода – прилипает к низу с отступом под системную панель */
   .input-area {
+    position: sticky;
+    bottom: 0;
     padding: 0.8rem 1rem;
+    padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    z-index: 10;
+    width: 100%;
+    margin: 0;
   }
+  @supports not (padding-bottom: env(safe-area-inset-bottom)) {
+    .input-area {
+      padding-bottom: 1.2rem;
+    }
+  }
+  /* Дополнительный отступ для устройств с жестами (Samsung) */
+  @media (pointer: coarse) {
+    .input-area {
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px));
+    }
+  }
+
+  #userInput {
+    font-size: 16px; /* отключает масштабирование при фокусе */
+    padding: 0.7rem 1rem;
+    min-height: 48px;
+  }
+  button#sendBtn, button#stopBtn {
+    padding: 0.5rem 1.2rem;
+    min-width: 70px;
+  }
+
+  /* Сообщения */
+  .message {
+    max-width: 95%;
+  }
+  .bubble, .content-block {
+    font-size: 1rem;
+  }
+
+  /* Модальные окна */
   .modal-content {
     min-width: 260px;
     padding: 1.2rem;
     margin: 1rem;
+    max-width: 90%;
   }
+  .modal-content h3 {
+    font-size: 1.3rem;
+  }
+  .modal-content button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Иконка редактирования */
   .edit-icon {
     font-size: 0.7rem;
     padding: 2px 6px;
   }
+
+  /* Настройки – строки в колонку */
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .settings-row button {
+    width: 100%;
+  }
+
+  /* Аватар */
+  .user-avatar {
+    width: 50px;
+    height: 50px;
+  }
 }
 
-/* ========== Страница авторизации ========== */
+/* Для очень маленьких экранов (≤480px) */
+@media (max-width: 480px) {
+  .chat-header {
+    flex-wrap: wrap;
+  }
+  .chat-controls {
+    width: 100%;
+    text-align: right;
+  }
+  .chat-controls select {
+    width: 100%;
+    margin-top: 0.3rem;
+  }
+  select {
+    width: 100%;
+  }
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .settings-row button {
+    width: 100%;
+  }
+}
+
+/* ========== СТРАНИЦА АВТОРИЗАЦИИ ========== */
 .auth-page {
   min-height: 100vh;
   background: radial-gradient(circle at 10% 30%, #0f0c29, #1a1a3a, #24243e);
@@ -667,11 +812,10 @@ input:focus, textarea:focus {
   justify-content: center;
   padding: 1rem;
 }
-
 .auth-card input {
   width: 100%;
-  height: 48px;                /* фиксированная высота */
-  margin-bottom: 1rem;         /* отступ снизу */
+  height: 48px;
+  margin-bottom: 1rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 60px;
@@ -679,7 +823,6 @@ input:focus, textarea:focus {
   font-size: 1rem;
   color: var(--text-primary);
 }
-
 body.light .auth-page {
   background: radial-gradient(circle at 20% 40%, #d9e4ff, #c8d6ff, #b8c6ff);
 }
@@ -777,263 +920,4 @@ body.light .auth-page {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.burger-menu {
-  display: none;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1.6rem;
-  color: var(--text-primary);
-  padding: 0.5rem;
-  margin-right: 0.5rem;
-  z-index: 30;
-  transition: 0.2s;
-}
-
-.burger-menu:hover {
-  color: var(--accent);
-  transform: scale(1.05);
-}
-
-/* Оверлей (затемнение фона при открытой боковой панели) */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 15;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.sidebar-overlay.active {
-  display: block;
-  opacity: 1;
-}
-
-/* Мобильные стили (дополнение к существующему медиазапросу) */
-@media (max-width: 768px) {
-  /* Показываем бургер */
-  .burger-menu {
-    display: inline-block;
-  }
-
-  /* Боковая панель: фиксированная, слева */
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    bottom: 0;
-    width: 280px;
-    z-index: 20;
-    transition: left 0.25s ease;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border);
-  }
-
-  /* Открытое состояние */
-  .sidebar.open {
-    left: 0;
-  }
-
-  /* Основная область — на всю ширину */
-  .main {
-    width: 100%;
-    position: relative;
-  }
-
-  /* Шапка чата — кнопка бургер добавляется в неё через JS, поэтому нужны отступы */
-  .chat-header {
-    padding: 0.8rem 1rem;
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  /* Заголовок чата — обрезаем длинные названия */
-  #currentChatTitle {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 1rem;
-  }
-
-  /* Блок управления (select) — можно перенести в новую строку при нехватке места */
-  .chat-controls {
-    margin-left: auto;
-  }
-
-  /* Сообщения */
-  .message {
-    max-width: 95%;
-  }
-
-  /* Уменьшаем отступы в контейнере чата */
-  .chat-container {
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  /* Поле ввода — компактнее */
-  .input-area {
-    padding: 0.8rem 1rem;
-  }
-
-  button, .button {
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-  }
-
-  textarea {
-    font-size: 0.9rem;
-    padding: 0.6rem 1rem;
-  }
-
-  /* Модальные окна */
-  .modal-content {
-    min-width: 260px;
-    padding: 1.2rem;
-    margin: 1rem;
-    max-width: 90%;
-  }
-
-  .modal-content h3 {
-    font-size: 1.3rem;
-  }
-
-  /* Иконка редактирования */
-  .edit-icon {
-    font-size: 0.7rem;
-    padding: 2px 6px;
-  }
-
-  /* Настройки: строки в колонку на очень маленьких экранах */
-  .settings-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .settings-row button {
-    width: 100%;
-  }
-
-  /* Аватар в сайдбаре */
-  .user-avatar {
-    width: 50px;
-    height: 50px;
-  }
-}
-
-/* Для очень маленьких экранов (планшеты в портретной ориентации) */
-@media (max-width: 480px) {
-  .chat-header {
-    flex-wrap: wrap;
-  }
-  .chat-controls {
-    width: 100%;
-    text-align: right;
-  }
-  .chat-controls select {
-    width: 100%;
-    margin-top: 0.3rem;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Увеличиваем отступы снизу, чтобы поле ввода не прилипало к клавиатуре */
-  body {
-    position: relative;
-    height: 100%;
-  }
-
-  .input-area {
-    padding: 0.8rem 1rem;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    z-index: 10;
-  }
-
-  #userInput {
-    font-size: 16px; /* предотвращает масштабирование на iOS */
-    padding: 0.7rem 1rem;
-    min-height: 48px;
-  }
-
-  button#sendBtn, button#stopBtn {
-    padding: 0.5rem 1.2rem;
-    min-width: 70px;
-  }
-
-  /* Увеличиваем отступы для сообщений */
-  .chat-container {
-    padding-bottom: 0.8rem;
-  }
-
-  .bubble, .content-block {
-    font-size: 1rem;
-  }
-
-  /* Улучшаем кнопки в модалках */
-  .modal-content button {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
-}
-
-/* Для очень маленьких экранов (до 480px) */
-@media (max-width: 480px) {
-  .chat-header {
-    flex-wrap: wrap;
-  }
-  .chat-controls {
-    width: 100%;
-    margin-top: 0.3rem;
-  }
-  select {
-    width: 100%;
-  }
-  .settings-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .settings-row button {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .input-area {
-    padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
-    margin-bottom: 0;
-    position: sticky;
-    bottom: 0;
-    background: var(--bg-secondary);
-    z-index: 10;
-  }
-
-  /* Дополнительная защита для браузеров, которые не поддерживают env */
-  @supports not (padding-bottom: env(safe-area-inset-bottom)) {
-    .input-area {
-      padding-bottom: 1.2rem;
-    }
-  }
-}
-
-/* Если системные кнопки всё ещё перекрывают, можно добавить резервный отступ для Android */
-@media (max-width: 768px) and (pointer: coarse) {
-  .input-area {
-    padding-bottom: 1.4rem;
-  }
 }
