@@ -23,7 +23,7 @@
             <span>👤 <span id="sidebarUsername"></span></span>
           </div>
         </div>
-        <button id="settingsBtn" class="icon-btn">Настройки</button>
+        <a href="/settings.html" class="icon-btn" style="text-decoration: none; display: inline-block;">Настройки</a>
         <button id="logoutBtn" class="icon-btn">Выйти</button>
       </div>
     </aside>
@@ -53,46 +53,6 @@
         </div>
       </div>
     </main>
-  </div>
-
-  <!-- Модальное окно настроек -->
-  <div id="settingsModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h3>Настройки</h3>
-      
-      <div class="settings-section">
-        <label><input type="checkbox" id="saveHistoryToggle"> Сохранять историю чатов</label>
-        <label><input type="checkbox" id="themeToggle"> Тёмная тема</label>
-      </div>
-
-      <div class="settings-section">
-        <h4>Профиль</h4>
-        <!-- Строка с аватаром -->
-        <div class="settings-row">
-          <span>Аватар:</span>
-          <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
-          <button id="changeAvatarBtn" class="small-btn">Сменить</button>
-          <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display: none;">
-        </div>
-        <div class="settings-row">
-          <span>Никнейм:</span>
-          <span id="currentUsername"></span>
-          <button id="changeUsernameBtn" class="small-btn">Изменить</button>
-        </div>
-        <div class="settings-row">
-          <button id="changePasswordBtn" class="small-btn">Сменить пароль</button>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <h4>Управление данными</h4>
-        <button id="deleteAllChatsBtn" class="danger-btn">Удалить все чаты</button>
-        <button id="deleteAccountBtn" class="danger-btn">Удалить аккаунт</button>
-      </div>
-
-      <button id="saveSettingsBtn">Сохранить настройки</button>
-    </div>
   </div>
 
   <!-- Модальное окно смены пароля -->

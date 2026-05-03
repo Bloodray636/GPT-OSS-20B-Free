@@ -1,3 +1,5 @@
+// public/chat.js
+
 // Глобальный токен
 let authToken = localStorage.getItem('auth_token');
 
@@ -6,13 +8,12 @@ const state = {
   currentUser: null,
   currentChatId: null,
   chats: [],
-  settings: { theme: 'dark', saveHistory: true },
   streaming: false,
   streamingData: { reasoningDiv: null, contentDiv: null, abortController: null },
   modals: { editMessageDiv: null, renameChatId: null, confirmCallback: null },
 };
 
-// DOM
+// DOM элементы (только для чата)
 const DOM = {
   chatContainer: document.getElementById('chatContainer'),
   userInput: document.getElementById('userInput'),
@@ -23,12 +24,6 @@ const DOM = {
   currentChatTitle: document.getElementById('currentChatTitle'),
   newChatBtn: document.getElementById('newChatBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
-  settingsBtn: document.getElementById('settingsBtn'),
-  settingsModal: document.getElementById('settingsModal'),
-  saveHistoryToggle: document.getElementById('saveHistoryToggle'),
-  themeToggle: document.getElementById('themeToggle'),
-  saveSettingsBtn: document.getElementById('saveSettingsBtn'),
-  modalClose: document.querySelector('#settingsModal .close'),
   confirmModal: document.getElementById('confirmModal'),
   confirmTitle: document.getElementById('confirmTitle'),
   confirmMessage: document.getElementById('confirmMessage'),
@@ -42,29 +37,11 @@ const DOM = {
   renameChatInput: document.getElementById('renameChatInput'),
   renameSaveBtn: document.getElementById('renameSaveBtn'),
   renameCancelBtn: document.getElementById('renameCancelBtn'),
-  changePasswordModal: document.getElementById('changePasswordModal'),
-  changeUsernameModal: document.getElementById('changeUsernameModal'),
-  oldPasswordInput: document.getElementById('oldPassword'),
-  newPasswordInput: document.getElementById('newPassword'),
-  confirmPasswordInput: document.getElementById('confirmPassword'),
-  passwordError: document.getElementById('passwordError'),
-  newUsernameInput: document.getElementById('newUsername'),
-  usernameError: document.getElementById('usernameError'),
-  sidebarUsername: document.getElementById('sidebarUsername'),
-  currentUsernameSpan: document.getElementById('currentUsername'),
   infoModal: document.getElementById('infoModal'),
   infoTitle: document.getElementById('infoTitle'),
   infoMessage: document.getElementById('infoMessage'),
   infoOkBtn: document.getElementById('infoOkBtn'),
-  deleteAccountModal: document.getElementById('deleteAccountModal'),
-  deleteAccountPassword: document.getElementById('deleteAccountPassword'),
-  cancelDeleteAccountBtn: document.getElementById('cancelDeleteAccountBtn'),
-  confirmDeleteAccountBtn: document.getElementById('confirmDeleteAccountBtn'),
-  deleteAccountError: document.getElementById('deleteAccountError'),
-  userAvatar: document.getElementById('userAvatar'),
-  settingsAvatar: document.getElementById('settingsAvatar'),
-  changeAvatarBtn: document.getElementById('changeAvatarBtn'),
-  avatarInput: document.getElementById('avatarInput'),
+  sidebarUsername: document.getElementById('sidebarUsername'),
 };
 
 // Утилиты
@@ -74,19 +51,13 @@ const scrollToBottom = () => DOM.chatContainer.scrollTop = DOM.chatContainer.scr
 const fetchJSON = async (url, options = {}) => {
   const headers = options.headers || {};
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-
   const res = await fetch(url, { ...options, headers });
-
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 };
 
 const closeAllModals = () => {
-  const modals = [
-    DOM.settingsModal, DOM.confirmModal, DOM.editModal, DOM.renameModal,
-    DOM.changePasswordModal, DOM.changeUsernameModal, DOM.infoModal, DOM.deleteAccountModal
-  ];
-
+  const modals = [DOM.confirmModal, DOM.editModal, DOM.renameModal, DOM.infoModal];
   modals.forEach(modal => { if (modal) modal.style.display = 'none'; });
 };
 
@@ -117,7 +88,7 @@ const showRenameModal = (chatId, currentTitle) => {
   DOM.renameChatInput.focus();
 };
 
-// Обработчики кнопок
+// Обработчики модальных кнопок
 if (DOM.confirmYesBtn) DOM.confirmYesBtn.onclick = () => {
   if (state.modals.confirmCallback) state.modals.confirmCallback();
   closeAllModals();
@@ -126,7 +97,6 @@ if (DOM.confirmYesBtn) DOM.confirmYesBtn.onclick = () => {
 if (DOM.confirmNoBtn) DOM.confirmNoBtn.onclick = closeAllModals;
 if (DOM.infoOkBtn) DOM.infoOkBtn.onclick = () => DOM.infoModal.style.display = 'none';
 if (DOM.editCancelBtn) DOM.editCancelBtn.onclick = () => DOM.editModal.style.display = 'none';
-
 if (DOM.editSaveBtn) DOM.editSaveBtn.onclick = async () => {
   const newText = DOM.editMessageText.value.trim();
   if (!newText) return;
@@ -134,7 +104,6 @@ if (DOM.editSaveBtn) DOM.editSaveBtn.onclick = async () => {
   await applyEditMessage(state.modals.editMessageDiv, newText);
   state.modals.editMessageDiv = null;
 };
-
 if (DOM.renameCancelBtn) DOM.renameCancelBtn.onclick = () => DOM.renameModal.style.display = 'none';
 if (DOM.renameSaveBtn) DOM.renameSaveBtn.onclick = async () => {
   const newTitle = DOM.renameChatInput.value.trim();
@@ -143,51 +112,7 @@ if (DOM.renameSaveBtn) DOM.renameSaveBtn.onclick = async () => {
   state.modals.renameChatId = null;
 };
 
-// Настройки и тема
-const applyTheme = (theme) => {
-  document.body.classList.toggle('dark', theme === 'dark');
-  document.body.classList.toggle('light', theme === 'light');
-};
-
-const loadSettings = async () => {
-  const res = await fetchJSON('/api/settings');
-  state.settings = res;
-  DOM.saveHistoryToggle.checked = state.settings.saveHistory;
-  DOM.themeToggle.checked = state.settings.theme === 'dark';
-};
-
-const saveSettings = async (theme, saveHistory) => {
-  await fetchJSON('/api/settings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ theme, saveHistory }),
-  });
-  state.settings = { theme, saveHistory };
-  applyTheme(theme);
-};
-
-// Аватар
-const loadAvatar = async () => {
-  try {
-    const res = await fetchJSON('/api/user/avatar');
-    if (res.url) {
-      DOM.userAvatar.src = res.url;
-      DOM.settingsAvatar.src = res.url;
-    } else {
-      DOM.userAvatar.src = '/default-avatar.svg';
-      DOM.settingsAvatar.src = '/default-avatar.svg';
-    }
-  } catch {
-    DOM.userAvatar.src = '/default-avatar.svg';
-    DOM.settingsAvatar.src = '/default-avatar.svg';
-  }
-};
-
-const uploadAvatar = async (file) => {
-  showInfoModal('Инфо', 'Функция загрузки аватара временно отключена');
-};
-
-// Чаты
+// --- Работа с чатами ---
 const renderChatList = () => {
   DOM.chatList.innerHTML = '';
   state.chats.forEach(chat => {
@@ -241,14 +166,10 @@ const renameChatById = async (chatId, newTitle) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newTitle }),
     });
-
     if (res.success) {
       const chat = state.chats.find(c => c.id === chatId);
-
       if (chat) chat.title = newTitle;
-      
       renderChatList();
-
       if (state.currentChatId === chatId) DOM.currentChatTitle.textContent = newTitle;
     } else {
       showInfoModal('Ошибка', 'Не удалось переименовать чат');
@@ -260,22 +181,14 @@ const renameChatById = async (chatId, newTitle) => {
 
 const deleteChatConfirm = (chatId) => {
   showConfirm('Удалить чат', 'Вы уверены, что хотите удалить этот чат?', async () => {
-    const res = await fetch(`/api/chats/${chatId}`, { 
-        method: 'DELETE', 
-        headers: authToken ? { 
-            Authorization: `Bearer ${authToken}` 
-        } : {} 
-    });
-
+    const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
     if (res.ok) {
       state.chats = state.chats.filter(c => c.id !== chatId);
       renderChatList();
-
       if (state.currentChatId === chatId) {
         if (state.chats.length) await openChat(state.chats[0].id);
         else await createNewChat();
       }
-
     } else {
       showInfoModal('Ошибка', 'Не удалось удалить чат');
     }
@@ -289,7 +202,6 @@ const createNewChat = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'Новый чат' }),
     });
-
     state.chats.unshift(newChat);
     renderChatList();
     await openChat(newChat.id);
@@ -303,27 +215,24 @@ const openChat = async (chatId) => {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
-
   state.currentChatId = chatId;
   renderChatList();
   try {
     const chat = await fetchJSON(`/api/chats/${chatId}`);
     DOM.currentChatTitle.textContent = chat.title;
     DOM.chatContainer.innerHTML = '';
-
     if (chat.messages?.length) {
       for (const msg of chat.messages) await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
     } else {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
-
     scrollToBottom();
   } catch {
     showInfoModal('Ошибка', 'Не удалось загрузить чат');
   }
 };
 
-// Отображение сообщений
+// --- Отображение сообщений (без изменений) ---
 const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
@@ -334,7 +243,6 @@ const appendMessageToDOM = async (role, content, reasoning = null) => {
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
-
     const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
     const reasoningHtml = reasoning ? `<div class="reasoning-block">${escapeHtml(reasoning)}</div>` : '';
     assistantDiv.innerHTML = `${reasoningHtml}<div class="content-block">${formatted}</div>`;
@@ -346,20 +254,16 @@ const appendMessageToDOM = async (role, content, reasoning = null) => {
 const createStreamingAssistantContainer = () => {
   const assistantDiv = document.createElement('div');
   assistantDiv.className = 'message assistant';
-
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
   reasoningBlock.style.display = 'none';
-
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
   assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
   DOM.chatContainer.appendChild(assistantDiv);
-
   scrollToBottom();
-
   return { reasoningBlock, contentBlock };
 };
 
@@ -375,7 +279,6 @@ const updateContent = (text) => {
   if (state.streamingData.contentDiv) {
     if (!state.streamingData.contentDiv.dataset.raw) state.streamingData.contentDiv.dataset.raw = '';
     state.streamingData.contentDiv.dataset.raw += text;
-
     const raw = state.streamingData.contentDiv.dataset.raw.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '[Изображение не поддерживается]');
     state.streamingData.contentDiv.innerHTML = marked.parse(raw, { async: false });
     scrollToBottom();
@@ -387,23 +290,18 @@ const applyEditMessage = async (messageDiv, newText) => {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
-
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
-
   if (index === -1) return;
-
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
     body: JSON.stringify({ keepIndex: index - 1 }),
   });
-
   if (!truncateRes.ok) {
     showInfoModal('Ошибка', 'Не удалось обновить историю');
     return;
   }
-
   for (let i = index; i < allMessages.length; i++) allMessages[i].remove();
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
@@ -435,17 +333,12 @@ const generateNewResponse = async (userMessage) => {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-
     while (true) {
       const { done, value } = await reader.read();
-
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
-
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
@@ -457,14 +350,10 @@ const generateNewResponse = async (userMessage) => {
         }
       }
     }
-
     await loadChats();
-
     const updatedChat = state.chats.find(c => c.id === state.currentChatId);
-
     if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title)
       DOM.currentChatTitle.textContent = updatedChat.title;
-
   } catch (err) {
     if (err.name !== 'AbortError') updateContent(`Ошибка: ${err.message}`);
   } finally {
@@ -480,11 +369,8 @@ const generateNewResponse = async (userMessage) => {
 
 const sendMessage = async () => {
   const text = DOM.userInput.value.trim();
-
   if (!text || state.streaming) return;
-
   DOM.userInput.value = '';
-
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);
 };
@@ -492,279 +378,47 @@ const sendMessage = async () => {
 const stopGeneration = () => {
   if (state.streamingData.abortController) {
     state.streamingData.abortController.abort();
-
     updateContent('(генерация остановлена)');
-
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';
   }
 };
 
-// Настройки профиля
-const changePassword = async () => {
-  const oldPwd = DOM.oldPasswordInput.value;
-  const newPwd = DOM.newPasswordInput.value;
-  const confirmPwd = DOM.confirmPasswordInput.value;
-
-  if (!oldPwd || !newPwd || !confirmPwd) {
-    DOM.passwordError.textContent = 'Заполните все поля';
-    return;
-  }
-
-  if (newPwd !== confirmPwd) {
-    DOM.passwordError.textContent = 'Новые пароли не совпадают';
-    return;
-  }
-
-  if (newPwd.length < 6) {
-    DOM.passwordError.textContent = 'Пароль должен быть не менее 6 символов';
-    return;
-  }
-
-  try {
-    const res = await fetchJSON('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
-    });
-
-    if (res.success) {
-      showInfoModal('Успех', 'Пароль успешно изменён');
-      closeAllModals();
-      DOM.passwordError.textContent = '';
-      DOM.oldPasswordInput.value = DOM.newPasswordInput.value = DOM.confirmPasswordInput.value = '';
-    } else {
-      DOM.passwordError.textContent = res.error || 'Ошибка';
-    }
-  } catch {
-    DOM.passwordError.textContent = 'Ошибка соединения';
-  }
-};
-
-const changeUsername = async () => {
-  const newName = DOM.newUsernameInput.value.trim();
-
-  if (!newName) {
-    DOM.usernameError.textContent = 'Введите новый никнейм';
-    return;
-  }
-
-  if (newName.length < 3 || !/^[a-zA-Z0-9_]+$/.test(newName)) {
-    DOM.usernameError.textContent = 'Минимум 3 символа, буквы/цифры/_';
-    return;
-  }
-
-  try {
-    const res = await fetchJSON('/api/auth/change-username', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ newUsername: newName }),
-    });
-
-    if (res.success) {
-      showInfoModal('Успех', `Никнейм изменён на ${newName}`);
-      closeAllModals();
-      DOM.usernameError.textContent = '';
-      state.currentUser = newName;
-
-      if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = newName;
-      if (DOM.currentUsernameSpan) DOM.currentUsernameSpan.textContent = newName;
-
-      DOM.newUsernameInput.value = '';
-
-    } else {
-      DOM.usernameError.textContent = res.error || 'Ошибка';
-    }
-
-  } catch {
-    DOM.usernameError.textContent = 'Ошибка соединения';
-  }
-};
-
-const deleteAllChats = () => {
-  showConfirm('Удалить все чаты', 'Вы уверены, что хотите удалить ВСЕ чаты?', async () => {
-
-    try {
-      const chatsToDelete = [...state.chats];
-
-      for (const chat of chatsToDelete) {
-        await fetch(`/api/chats/${chat.id}`, { 
-            method: 'DELETE', 
-            headers: authToken ? { 
-                Authorization: `Bearer ${authToken}` 
-            } : {} 
-        });
-      }
-
-      state.chats = [];
-      state.currentChatId = null;
-
-      renderChatList();
-
-      DOM.chatContainer.innerHTML = '';
-      DOM.currentChatTitle.textContent = '';
-
-      await loadChats();
-
-      if (state.chats.length === 0) await createNewChat();
-      else await openChat(state.chats[0].id);
-
-      showInfoModal('Готово', 'Все чаты удалены');
-    } catch (err) {
-      showInfoModal('Ошибка', 'Не удалось удалить все чаты');
-    }
-  });
-};
-
-if (DOM.cancelDeleteAccountBtn) DOM.cancelDeleteAccountBtn.onclick = () => DOM.deleteAccountModal.style.display = 'none';
-if (DOM.confirmDeleteAccountBtn) {
-  DOM.confirmDeleteAccountBtn.onclick = async () => {
-    const pwd = DOM.deleteAccountPassword.value;
-
-    if (!pwd) {
-      DOM.deleteAccountError.textContent = 'Введите пароль';
-      return;
-    }
-
-    try {
-      const res = await fetchJSON('/api/auth/delete-account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwd }),
-      });
-
-      if (res.success) {
-        showInfoModal('Аккаунт удалён', 'Перенаправление...');
-        setTimeout(() => window.location.href = '/auth.html', 1500);
-      } else {
-        DOM.deleteAccountError.textContent = res.error || 'Ошибка удаления';
-      }
-
-    } catch {
-      DOM.deleteAccountError.textContent = 'Ошибка соединения';
-    }
-  };
-}
-
-const initSettingsHandlers = () => {
-  document.getElementById('changePasswordBtn')?.addEventListener('click', () => DOM.changePasswordModal.style.display = 'flex');
-
-  document.getElementById('cancelPasswordBtn')?.addEventListener('click', () => {
-    closeAllModals();
-    DOM.passwordError.textContent = '';
-    DOM.oldPasswordInput.value = DOM.newPasswordInput.value = DOM.confirmPasswordInput.value = '';
-  });
-
-  document.getElementById('savePasswordBtn')?.addEventListener('click', changePassword);
-
-  document.getElementById('changeUsernameBtn')?.addEventListener('click', () => DOM.changeUsernameModal.style.display = 'flex');
-
-  document.getElementById('cancelUsernameBtn')?.addEventListener('click', () => {
-    closeAllModals();
-    DOM.usernameError.textContent = '';
-    DOM.newUsernameInput.value = '';
-  });
-
-  document.getElementById('saveUsernameBtn')?.addEventListener('click', changeUsername);
-
-  document.getElementById('deleteAllChatsBtn')?.addEventListener('click', deleteAllChats);
-
-  document.getElementById('deleteAccountBtn')?.addEventListener('click', () => {
-    DOM.deleteAccountModal.style.display = 'flex';
-    DOM.deleteAccountPassword.value = '';
-    DOM.deleteAccountError.textContent = '';
-  });
-
-  if (DOM.changeAvatarBtn) {
-    DOM.changeAvatarBtn.addEventListener('click', () => DOM.avatarInput.click());
-  }
-
-  if (DOM.avatarInput) {
-    DOM.avatarInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) uploadAvatar(e.target.files[0]);
-    });
-  }
-};
-
-const initPasswordToggles = () => {
-  document.querySelectorAll('.toggle-password').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.getAttribute('data-target');
-      const input = document.getElementById(targetId);
-      if (input) input.type = input.type === 'password' ? 'text' : 'password';
-    });
-  });
-};
-
+// --- Авторизация, загрузка чатов ---
 const checkAuth = async () => {
   try {
     const data = await fetchJSON('/api/auth/status');
-
-    if (!data.authenticated) {
-      window.location.href = '/auth.html';
-      return;
-    }
-
+    if (!data.authenticated) throw new Error('Not authenticated');
     state.currentUser = data.username;
-
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
-    if (DOM.currentUsernameSpan) DOM.currentUsernameSpan.textContent = state.currentUser;
-
-    await loadSettings();
     await loadChats();
-    await loadAvatar();
-
-    applyTheme(state.settings.theme);
-
     if (state.chats.length === 0) await createNewChat();
     else await openChat(state.chats[0].id);
-  } catch {
+  } catch (err) {
+    console.error('Auth check failed:', err);
+    localStorage.removeItem('auth_token');
     window.location.href = '/auth.html';
   }
 };
 
-// Старт приложения
+// --- Старт приложения ---
 document.addEventListener('DOMContentLoaded', () => {
-  if (DOM.settingsBtn) {
-    DOM.settingsBtn.onclick = () => {
-      DOM.saveHistoryToggle.checked = state.settings.saveHistory;
-      DOM.themeToggle.checked = state.settings.theme === 'dark';
-      DOM.settingsModal.style.display = 'flex';
-    };
-  }
-
-  if (DOM.modalClose) DOM.modalClose.onclick = () => DOM.settingsModal.style.display = 'none';
-
-  if (DOM.saveSettingsBtn) {
-    DOM.saveSettingsBtn.onclick = async () => {
-      await saveSettings(DOM.themeToggle.checked ? 'dark' : 'light', DOM.saveHistoryToggle.checked);
-      DOM.settingsModal.style.display = 'none';
-    };
-  }
-
   window.onclick = (e) => {
-    if (e.target === DOM.settingsModal) DOM.settingsModal.style.display = 'none';
     if (e.target === DOM.confirmModal) DOM.confirmModal.style.display = 'none';
     if (e.target === DOM.editModal) DOM.editModal.style.display = 'none';
     if (e.target === DOM.renameModal) DOM.renameModal.style.display = 'none';
-    if (e.target === DOM.changePasswordModal) DOM.changePasswordModal.style.display = 'none';
-    if (e.target === DOM.changeUsernameModal) DOM.changeUsernameModal.style.display = 'none';
     if (e.target === DOM.infoModal) DOM.infoModal.style.display = 'none';
-    if (e.target === DOM.deleteAccountModal) DOM.deleteAccountModal.style.display = 'none';
   };
 
   DOM.newChatBtn?.addEventListener('click', createNewChat);
-
   DOM.logoutBtn?.addEventListener('click', async () => {
     await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
     localStorage.removeItem('auth_token');
     window.location.href = '/auth.html';
   });
-
   DOM.sendBtn?.addEventListener('click', sendMessage);
   DOM.stopBtn?.addEventListener('click', stopGeneration);
-
   DOM.userInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -772,28 +426,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  initSettingsHandlers();
-  initPasswordToggles();
-  checkAuth();
-});
-
-// Бургер-меню и оверлей (мобильная версия)
-const burgerMenu = document.getElementById('burgerMenu');
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-if (burgerMenu && sidebar && sidebarOverlay) {
+  // Бургер-меню и оверлей
+  const burgerMenu = document.getElementById('burgerMenu');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  if (burgerMenu && sidebar && sidebarOverlay) {
     const toggleSidebar = () => {
-        sidebar.classList.toggle('open');
-        sidebarOverlay.classList.toggle('active');
+      sidebar.classList.toggle('open');
+      sidebarOverlay.classList.toggle('active');
     };
     burgerMenu.addEventListener('click', toggleSidebar);
     sidebarOverlay.addEventListener('click', toggleSidebar);
-
-    // При изменении размера окна на широкое (десктоп) закрываем панель
     window.addEventListener('resize', () => {
-        if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
+      if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
         toggleSidebar();
-        }
+      }
     });
-}
+  }
+
+  checkAuth();
+});

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Настройки | GPT-OSS-20B</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark">
+  <div class="settings-container">
+    <div class="settings-header">
+      <a href="/chat.html" class="back-btn">← Назад в чат</a>
+      <h1>Настройки</h1>
+    </div>
+
+    <div class="settings-block">
+      <h3>Интерфейс</h3>
+      <label><input type="checkbox" id="saveHistoryToggle"> Сохранять историю чатов</label>
+      <label><input type="checkbox" id="themeToggle"> Тёмная тема</label>
+    </div>
+
+    <div class="settings-block">
+      <h3>Профиль</h3>
+      <div class="settings-row">
+        <span>Аватар:</span>
+        <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
+        <button id="changeAvatarBtn" class="small-btn">Сменить</button>
+        <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display: none;">
+      </div>
+      <div class="settings-row">
+        <span>Никнейм:</span>
+        <span id="currentUsername"></span>
+        <button id="changeUsernameBtn" class="small-btn">Изменить</button>
+      </div>
+      <button id="changePasswordBtn" class="small-btn">Сменить пароль</button>
+    </div>
+
+    <div class="settings-block">
+      <h3>Управление данными</h3>
+      <button id="deleteAllChatsBtn" class="danger-btn">Удалить все чаты</button>
+      <button id="deleteAccountBtn" class="danger-btn">Удалить аккаунт</button>
+    </div>
+
+    <button id="saveSettingsBtn" class="save-btn">Сохранить настройки</button>
+  </div>
+
+  <!-- Модальное окно смены пароля -->
+  <div id="changePasswordModal" class="modal">
+    <div class="modal-content">
+      <h3>Смена пароля</h3>
+      <div class="input-group password-group">
+        <input type="password" id="oldPassword" placeholder="Старый пароль">
+        <span class="toggle-password" data-target="oldPassword">👁️</span>
+      </div>
+      <div class="input-group password-group">
+        <input type="password" id="newPassword" placeholder="Новый пароль (мин. 6 символов)">
+        <span class="toggle-password" data-target="newPassword">👁️</span>
+      </div>
+      <div class="input-group password-group">
+        <input type="password" id="confirmPassword" placeholder="Подтвердите пароль">
+        <span class="toggle-password" data-target="confirmPassword">👁️</span>
+      </div>
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="cancelPasswordBtn" class="secondary">Отмена</button>
+        <button id="savePasswordBtn">Сохранить</button>
+      </div>
+      <div id="passwordError" class="error-message"></div>
+    </div>
+  </div>
+
+  <!-- Модальное окно смены никнейма -->
+  <div id="changeUsernameModal" class="modal">
+    <div class="modal-content">
+      <h3>Сменить никнейм</h3>
+      <input type="text" id="newUsername" placeholder="Новый никнейм (буквы, цифры, _)">
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="cancelUsernameBtn" class="secondary">Отмена</button>
+        <button id="saveUsernameBtn">Сохранить</button>
+      </div>
+      <div id="usernameError" class="error-message"></div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <h3 id="confirmTitle">Подтверждение</h3>
+      <p id="confirmMessage">Вы уверены?</p>
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button id="confirmYesBtn" class="secondary">Да</button>
+        <button id="confirmNoBtn" class="secondary">Нет</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="infoModal" class="modal">
+    <div class="modal-content">
+      <h3 id="infoTitle">Информация</h3>
+      <p id="infoMessage"></p>
+      <button id="infoOkBtn">OK</button>
+    </div>
+  </div>
+
+  <div id="deleteAccountModal" class="modal">
+    <div class="modal-content">
+      <h3>Удаление аккаунта</h3>
+      <p>Введите пароль для подтверждения:</p>
+      <input type="password" id="deleteAccountPassword" placeholder="Пароль">
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="cancelDeleteAccountBtn" class="secondary">Отмена</button>
+        <button id="confirmDeleteAccountBtn" class="danger-btn">Удалить навсегда</button>
+      </div>
+      <div id="deleteAccountError" class="error-message"></div>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
