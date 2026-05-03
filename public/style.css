@@ -375,7 +375,7 @@ input:focus, textarea:focus {
   background: var(--accent);
   border: none;
   border-radius: 40px;
-  padding: 0.5rem 1rem;
+  padding: 0.5px 1px;
   font-size: 1.2rem;
   cursor: pointer;
   transition: 0.2s;
@@ -385,6 +385,11 @@ input:focus, textarea:focus {
   align-items: center;
   justify-content: center;
 }
+
+#sendBtn svg{
+  fill: #ffffff;
+}
+
 #sendBtn:hover {
   background: var(--accent-hover);
   transform: scale(1.02);
@@ -393,7 +398,7 @@ input:focus, textarea:focus {
   background: var(--danger);
   border: none;
   border-radius: 40px;
-  padding: 0.5rem 1rem;
+  padding: 0.5px 1px;
   font-size: 1.2rem;
   cursor: pointer;
   transition: 0.2s;
@@ -403,6 +408,13 @@ input:focus, textarea:focus {
   align-items: center;
   justify-content: center;
 }
+
+#stopBtn svg{
+  fill: #fff;
+  width: 70%;
+  height: 70%;
+}
+
 #stopBtn:hover {
   background: var(--danger-hover);
   transform: scale(1.02);
