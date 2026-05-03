@@ -230,11 +230,17 @@ const openChat = async (chatId) => {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
     scrollToBottom();
-  } catch {
-    showInfoModal('Ошибка', 'Не удалось загрузить чат');
+  } catch (err) {
+    console.warn(`Chat ${chatId} not found, reloading list`);
+    // Если чат не найден, перезагружаем список и переключаемся на первый
+    await loadChats();
+    if (state.chats.length > 0) {
+      await openChat(state.chats[0].id);
+    } else {
+      await createNewChat();
+    }
   }
 };
-
 // --- Отображение сообщений ---
 const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
@@ -408,8 +414,17 @@ const checkAuth = async () => {
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
     await loadAvatar();
     await loadChats();
-    if (state.chats.length === 0) await createNewChat();
-    else await openChat(state.chats[0].id);
+    // Если есть сохранённый ID чата, но его нет в списке – сбросить
+    if (state.currentChatId && !state.chats.some(c => c.id === state.currentChatId)) {
+      state.currentChatId = null;
+    }
+    if (state.chats.length === 0) {
+      await createNewChat();
+    } else {
+      // Открываем либо текущий чат (если валиден), либо первый
+      const chatToOpen = state.currentChatId || state.chats[0].id;
+      await openChat(chatToOpen);
+    }
   } catch (err) {
     console.error('Auth check failed:', err);
     localStorage.removeItem('auth_token');
