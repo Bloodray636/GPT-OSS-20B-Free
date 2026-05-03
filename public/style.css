@@ -388,6 +388,8 @@ input:focus, textarea:focus {
 
 #sendBtn svg{
   fill: #ffffff;
+  width: 54%;
+  height: 54%;
 }
 
 #sendBtn:hover {
