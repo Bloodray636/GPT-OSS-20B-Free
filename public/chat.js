@@ -13,7 +13,7 @@ const state = {
   modals: { editMessageDiv: null, renameChatId: null, confirmCallback: null },
 };
 
-// DOM элементы (только для чата)
+// DOM элементы (обновлённый список)
 const DOM = {
   chatContainer: document.getElementById('chatContainer'),
   userInput: document.getElementById('userInput'),
@@ -23,7 +23,6 @@ const DOM = {
   chatList: document.getElementById('chatList'),
   currentChatTitle: document.getElementById('currentChatTitle'),
   newChatBtn: document.getElementById('newChatBtn'),
-  logoutBtn: document.getElementById('logoutBtn'),
   confirmModal: document.getElementById('confirmModal'),
   confirmTitle: document.getElementById('confirmTitle'),
   confirmMessage: document.getElementById('confirmMessage'),
@@ -42,6 +41,10 @@ const DOM = {
   infoMessage: document.getElementById('infoMessage'),
   infoOkBtn: document.getElementById('infoOkBtn'),
   sidebarUsername: document.getElementById('sidebarUsername'),
+  userAvatar: document.getElementById('userAvatar'),
+  userMenuTrigger: document.getElementById('userMenuTrigger'),
+  userDropdown: document.getElementById('userDropdown'),
+  logoutBtnFromMenu: document.getElementById('logoutBtnFromMenu'),
 };
 
 // Утилиты
@@ -232,7 +235,7 @@ const openChat = async (chatId) => {
   }
 };
 
-// --- Отображение сообщений (без изменений) ---
+// --- Отображение сообщений ---
 const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
@@ -385,13 +388,25 @@ const stopGeneration = () => {
   }
 };
 
-// --- Авторизация, загрузка чатов ---
+// --- Загрузка аватара ---
+const loadAvatar = async () => {
+  try {
+    const res = await fetchJSON('/api/user/avatar');
+    if (res.url && DOM.userAvatar) DOM.userAvatar.src = res.url;
+    else if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
+  } catch {
+    if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
+  }
+};
+
+// --- Авторизация и начальная загрузка ---
 const checkAuth = async () => {
   try {
     const data = await fetchJSON('/api/auth/status');
     if (!data.authenticated) throw new Error('Not authenticated');
     state.currentUser = data.username;
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
+    await loadAvatar();
     await loadChats();
     if (state.chats.length === 0) await createNewChat();
     else await openChat(state.chats[0].id);
@@ -404,6 +419,7 @@ const checkAuth = async () => {
 
 // --- Старт приложения ---
 document.addEventListener('DOMContentLoaded', () => {
+  // Закрытие модалок по клику вне
   window.onclick = (e) => {
     if (e.target === DOM.confirmModal) DOM.confirmModal.style.display = 'none';
     if (e.target === DOM.editModal) DOM.editModal.style.display = 'none';
@@ -411,12 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === DOM.infoModal) DOM.infoModal.style.display = 'none';
   };
 
+  // Создание нового чата
   DOM.newChatBtn?.addEventListener('click', createNewChat);
-  DOM.logoutBtn?.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
-    localStorage.removeItem('auth_token');
-    window.location.href = '/auth.html';
-  });
+
+  // Отправка сообщения
   DOM.sendBtn?.addEventListener('click', sendMessage);
   DOM.stopBtn?.addEventListener('click', stopGeneration);
   DOM.userInput?.addEventListener('keydown', (e) => {
@@ -425,6 +439,30 @@ document.addEventListener('DOMContentLoaded', () => {
       sendMessage();
     }
   });
+
+  // Выпадающее меню пользователя (три точки)
+  if (DOM.userMenuTrigger && DOM.userDropdown) {
+    DOM.userMenuTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = DOM.userDropdown.style.display === 'block';
+      DOM.userDropdown.style.display = isVisible ? 'none' : 'block';
+    });
+    // Закрытие при клике вне
+    document.addEventListener('click', (e) => {
+      if (!DOM.userMenuTrigger.contains(e.target) && !DOM.userDropdown.contains(e.target)) {
+        DOM.userDropdown.style.display = 'none';
+      }
+    });
+  }
+
+  // Выход из системы через меню
+  if (DOM.logoutBtnFromMenu) {
+    DOM.logoutBtnFromMenu.addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+      localStorage.removeItem('auth_token');
+      window.location.href = '/auth.html';
+    });
+  }
 
   // Бургер-меню и оверлей
   const burgerMenu = document.getElementById('burgerMenu');
@@ -444,5 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Запуск проверки авторизации и загрузки чатов
   checkAuth();
 });
