@@ -482,9 +482,9 @@ app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async
 
   const fileExt = file.originalname.split('.').pop();
   const fileName = `${Date.now()}.${fileExt}`;
-  const filePath = `avatars/${req.user.id}/${fileName}`; // используем user.id (UUID)
+  const filePath = `avatars/${req.user.id}/${fileName}`;
 
-  // Загружаем в Storage через supabaseAdmin (обходит RLS)
+  // 1. Загружаем файл в Storage через admin
   const { error: uploadError } = await supabaseAdmin.storage
     .from('avatars')
     .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
@@ -494,13 +494,16 @@ app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async
   }
 
   const { data: { publicUrl } } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
-  
-  // Сохраняем URL в профиле
-  const { error: updateError } = await supabase
+
+  // 2. Обновляем профиль через admin (обходит RLS)
+  const { error: updateError } = await supabaseAdmin
     .from('profiles')
     .update({ avatar_url: publicUrl })
     .eq('id', req.user.id);
-  if (updateError) return res.status(500).json({ error: 'Failed to update profile' });
+  if (updateError) {
+    console.error(updateError);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
 
   res.json({ url: publicUrl });
 });
