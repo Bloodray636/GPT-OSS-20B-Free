@@ -398,8 +398,8 @@ const stopGeneration = () => {
 const loadAvatar = async () => {
   try {
     const res = await fetchJSON('/api/user/avatar');
-    if (res.url && DOM.userAvatar) DOM.userAvatar.src = res.url;
-    else if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
+    const avatarUrl = res.url || '/default-avatar.svg';
+    if (DOM.userAvatar) DOM.userAvatar.src = avatarUrl;
   } catch {
     if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
   }

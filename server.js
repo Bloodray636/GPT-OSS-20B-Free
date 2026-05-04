@@ -462,42 +462,19 @@ app.delete('/api/chats/all', authenticate, async (req, res) => {
 });
 
 // Аватары
-app.post('/api/user/avatar', authenticate, async (req, res) => {
-  const { avatarUrl } = req.body;
-
-  if (!avatarUrl) {
-    return res.status(400).json({ error: 'No avatar URL' });
-  }
-
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ avatar_url: avatarUrl })
-      .eq('id', req.user.id);
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+app.get('/api/user/avatar', authenticate, async (req, res) => {
+  const { data } = await supabase.from('profiles').select('avatar_url').eq('id', req.user.id).single();
+  if (data?.avatar_url) res.json({ url: data.avatar_url });
+  else res.status(404).json({ error: 'Not found' });
 });
 
-app.get('/api/user/avatar', authenticate, async (req, res) => {
-  try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('avatar_url')
-      .eq('id', req.user.id)
-      .single();
-
-    if (data?.avatar_url) {
-      res.json({ url: data.avatar_url });
-    } else {
-      res.status(404).json({ error: 'Not found' });
-    }
-  } catch {
-    res.status(404).json({ error: 'Not found' });
-  }
+// Сохранение URL аватара (после загрузки в Storage)
+app.post('/api/user/avatar', authenticate, async (req, res) => {
+  const { avatarUrl } = req.body;
+  if (!avatarUrl) return res.status(400).json({ error: 'No avatar URL' });
+  const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
 });
 
 // Рассуждения

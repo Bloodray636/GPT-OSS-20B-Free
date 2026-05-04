@@ -1,5 +1,15 @@
+// public/settings.js
+
 // Глобальный токен
 let authToken = localStorage.getItem('auth_token');
+
+// Конфигурация Supabase (замените на свои данные)
+const SUPABASE_URL = 'https://dyecqfkxsosimotogahf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_LcA9gkosKrwJ0a1U0V8MRQ_9l2L5Bwg';
+
+// Создаём клиент Supabase (если глобальный ещё не создан)
+const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabaseClient = supabase;
 
 // Состояния
 let currentSettings = { theme: 'dark', saveHistory: true };
@@ -122,20 +132,67 @@ const saveSettings = async () => {
   showInfoModal('Успех', 'Настройки сохранены');
 };
 
-// Аватар
+// --- Аватар (рабочая версия) ---
 const loadAvatar = async () => {
   try {
     const res = await fetchJSON('/api/user/avatar');
-    if (res.url) DOM.settingsAvatar.src = res.url;
-    else DOM.settingsAvatar.src = '/default-avatar.svg';
+    if (res.url) {
+      DOM.settingsAvatar.src = res.url;
+    } else {
+      DOM.settingsAvatar.src = '/default-avatar.svg';
+    }
   } catch {
     DOM.settingsAvatar.src = '/default-avatar.svg';
   }
 };
 
 const uploadAvatar = async (file) => {
-  // Аватар пока отключён, пока не настроим Supabase Storage
-  showInfoModal('Инфо', 'Функция загрузки аватара временно отключена');
+  // Проверяем, что файл – изображение
+  if (!file.type.startsWith('image/')) {
+    showInfoModal('Ошибка', 'Пожалуйста, выберите изображение');
+    return;
+  }
+  // Ограничим размер (5 MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showInfoModal('Ошибка', 'Файл не должен превышать 5 МБ');
+    return;
+  }
+
+  // Путь в Storage: avatars/{user_id}/{timestamp}.ext
+  const userId = currentUser; // или можно получить из JWT, но currentUser это username, а не UUID.
+  // Лучше получить реальный ID пользователя через /api/auth/status (но у нас есть только username). 
+  // Для простоты будем использовать имя пользователя (оно уникально), но это не совсем безопасно для Storage.
+  // Альтернатива: добавить эндпоинт /api/user/id, возвращающий uuid. 
+  // Или генерать уникальное имя на клиенте.
+  const fileName = `${Date.now()}_${file.name}`;
+  const filePath = `${currentUser}/${fileName}`; // папка по имени пользователя
+
+  try {
+    // Загружаем файл в Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true, contentType: file.type });
+    if (error) throw error;
+
+    // Получаем публичный URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    // Сохраняем URL в профиле
+    const res = await fetch('/api/user/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ avatarUrl: publicUrl }),
+    });
+    if (!res.ok) throw new Error('Failed to save avatar URL');
+
+    showInfoModal('Успех', 'Аватар обновлён');
+    await loadAvatar(); // перезагружаем аватар
+  } catch (err) {
+    console.error('Upload error:', err);
+    showInfoModal('Ошибка', 'Не удалось загрузить аватар: ' + (err.message || 'неизвестная ошибка'));
+  }
 };
 
 // Смена пароля
@@ -148,7 +205,7 @@ const changePassword = async () => {
     return;
   }
   if (newPwd !== confirmPwd) {
-    DOM.passwordError.textContent = 'Пароли не совпадают';
+    DOM.passwordError.textContent = 'Новые пароли не совпадают';
     return;
   }
   if (newPwd.length < 6) {
@@ -250,13 +307,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   DOM.deleteAccountBtn.onclick = deleteAccount;
 
   if (DOM.changeAvatarBtn) DOM.changeAvatarBtn.onclick = () => DOM.avatarInput.click();
-  if (DOM.avatarInput) DOM.avatarInput.onchange = (e) => {
-    if (e.target.files[0]) uploadAvatar(e.target.files[0]);
-  };
+  if (DOM.avatarInput) {
+    DOM.avatarInput.onchange = (e) => {
+      if (e.target.files && e.target.files[0]) uploadAvatar(e.target.files[0]);
+    };
+  }
 
   document.querySelectorAll('.toggle-password').forEach(btn => {
     btn.addEventListener('click', () => {
-      const targetId = btn.dataset.target;
+      const targetId = btn.getAttribute('data-target');
       const input = document.getElementById(targetId);
       if (input) input.type = input.type === 'password' ? 'text' : 'password';
     });
