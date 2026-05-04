@@ -462,11 +462,6 @@ app.delete('/api/chats/all', authenticate, async (req, res) => {
 });
 
 // Аватары
-app.get('/api/user/avatar', authenticate, async (req, res) => {
-  const { data } = await supabase.from('profiles').select('avatar_url').eq('id', req.user.id).single();
-  if (data?.avatar_url) res.json({ url: data.avatar_url });
-  else res.status(404).json({ error: 'Not found' });
-});
 
 app.get('/api/user/avatar', authenticate, async (req, res) => {
   const username = req.user.email?.split('@')[0];
