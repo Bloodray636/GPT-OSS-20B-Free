@@ -466,12 +466,24 @@ app.delete('/api/chats/all', authenticate, async (req, res) => {
 // Аватары
 
 app.get('/api/user/avatar', authenticate, async (req, res) => {
+  // Запрещаем кэширование на всех уровнях
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   const { data } = await supabase
     .from('profiles')
     .select('avatar_url')
     .eq('id', req.user.id)
     .single();
-  res.json({ url: data?.avatar_url || null });
+
+  // Если аватар есть, добавим временную метку к URL, чтобы картинка тоже не кэшировалась
+  let avatarUrl = data?.avatar_url;
+  if (avatarUrl) {
+    avatarUrl = avatarUrl + (avatarUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+  }
+
+  res.json({ url: avatarUrl || null });
 });
 
 app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async (req, res) => {

@@ -396,12 +396,20 @@ const stopGeneration = () => {
 
 // --- Загрузка аватара ---
 const loadAvatar = async () => {
+  if (!DOM.settingsAvatar) return;
   try {
-    const res = await fetchJSON('/api/user/avatar?_=' + Date.now());
-    const avatarUrl = res.url || '/default-avatar.svg';
-    if (DOM.userAvatar) DOM.userAvatar.src = avatarUrl;
-  } catch {
-    if (DOM.userAvatar) DOM.userAvatar.src = '/default-avatar.svg';
+    const res = await fetch('/api/user/avatar', {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    const data = await res.json();
+    DOM.settingsAvatar.src = data.url || '/default-avatar.svg';
+  } catch (err) {
+    console.warn('Avatar load error:', err);
+    DOM.settingsAvatar.src = '/default-avatar.svg';
   }
 };
 

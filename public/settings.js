@@ -127,10 +127,19 @@ const saveSettings = async () => {
 
 // ===== Аватар =====
 const loadAvatar = async () => {
+  if (!DOM.settingsAvatar) return;
   try {
-    const res = await fetchJSON('/api/user/avatar?_=' + Date.now());
-    DOM.settingsAvatar.src = res.url || '/default-avatar.svg';
-  } catch {
+    const res = await fetch('/api/user/avatar', {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    const data = await res.json();
+    DOM.settingsAvatar.src = data.url || '/default-avatar.svg';
+  } catch (err) {
+    console.warn('Avatar load error:', err);
     DOM.settingsAvatar.src = '/default-avatar.svg';
   }
 };
