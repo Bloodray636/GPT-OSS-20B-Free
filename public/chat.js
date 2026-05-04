@@ -1,19 +1,24 @@
-// public/chat.js
-
-// Глобальный токен
 let authToken = localStorage.getItem('auth_token');
 
-// Состояния
+// Состояния приложения
 const state = {
   currentUser: null,
   currentChatId: null,
   chats: [],
   streaming: false,
-  streamingData: { reasoningDiv: null, contentDiv: null, abortController: null },
-  modals: { editMessageDiv: null, renameChatId: null, confirmCallback: null },
+  streamingData: {
+    reasoningDiv: null,
+    contentDiv: null,
+    abortController: null
+  },
+  modals: {
+    editMessageDiv: null,
+    renameChatId: null,
+    confirmCallback: null
+  }
 };
 
-// DOM элементы (обновлённый список)
+// DOM
 const DOM = {
   chatContainer: document.getElementById('chatContainer'),
   userInput: document.getElementById('userInput'),
@@ -44,32 +49,58 @@ const DOM = {
   userAvatar: document.getElementById('userAvatar'),
   userMenuTrigger: document.getElementById('userMenuTrigger'),
   userDropdown: document.getElementById('userDropdown'),
-  logoutBtnFromMenu: document.getElementById('logoutBtnFromMenu'),
+  logoutBtnFromMenu: document.getElementById('logoutBtnFromMenu')
 };
 
 // Утилиты
-const escapeHtml = (str) => str.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-const scrollToBottom = () => DOM.chatContainer.scrollTop = DOM.chatContainer.scrollHeight;
+const escapeHtml = (str) =>
+  str.replace(/[&<>]/g, (m) => ({ 
+    '&': '&amp;', 
+    '<': '&lt;', 
+    '>': '&gt;' 
+  }[m]));
 
+const scrollToBottom = () => {
+  DOM.chatContainer.scrollTop = DOM.chatContainer.scrollHeight;
+};
+
+// Подстановка токена
 const fetchJSON = async (url, options = {}) => {
   const headers = options.headers || {};
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  const res = await fetch(url, { ...options, headers });
+
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  const res = await fetch(url, { 
+    ...options, headers 
+  });
+
   if (!res.ok) throw new Error(await res.text());
+
   return res.json();
 };
 
+// Закрыть все модальные окна
 const closeAllModals = () => {
-  const modals = [DOM.confirmModal, DOM.editModal, DOM.renameModal, DOM.infoModal];
-  modals.forEach(modal => { if (modal) modal.style.display = 'none'; });
+  const modals = [
+    DOM.confirmModal, 
+    DOM.editModal, 
+    DOM.renameModal, 
+    DOM.infoModal
+  ];
+
+  modals.forEach(modal => {
+    if (modal) modal.style.display = 'none';
+  });
 };
 
+// Информационное модальное окно
 const showInfoModal = (title, message) => {
   DOM.infoTitle.textContent = title;
   DOM.infoMessage.textContent = message;
   DOM.infoModal.style.display = 'flex';
 };
 
+// Подтверждение
 const showConfirm = (title, message, onConfirm) => {
   DOM.confirmTitle.textContent = title;
   DOM.confirmMessage.textContent = message;
@@ -77,6 +108,7 @@ const showConfirm = (title, message, onConfirm) => {
   state.modals.confirmCallback = onConfirm;
 };
 
+// Редактирование сообщения
 const showEditModal = (messageDiv, text) => {
   state.modals.editMessageDiv = messageDiv;
   DOM.editMessageText.value = text;
@@ -84,6 +116,7 @@ const showEditModal = (messageDiv, text) => {
   DOM.editMessageText.focus();
 };
 
+// Переименование чата
 const showRenameModal = (chatId, currentTitle) => {
   state.modals.renameChatId = chatId;
   DOM.renameChatInput.value = currentTitle;
@@ -91,36 +124,59 @@ const showRenameModal = (chatId, currentTitle) => {
   DOM.renameChatInput.focus();
 };
 
-// Обработчики модальных кнопок
-if (DOM.confirmYesBtn) DOM.confirmYesBtn.onclick = () => {
-  if (state.modals.confirmCallback) state.modals.confirmCallback();
-  closeAllModals();
-  state.modals.confirmCallback = null;
-};
+// Кнопки
+if (DOM.confirmYesBtn) {
+  DOM.confirmYesBtn.onclick = () => {
+    if (state.modals.confirmCallback){
+      state.modals.confirmCallback();
+    }
+
+    closeAllModals();
+    state.modals.confirmCallback = null;
+  };
+}
+
 if (DOM.confirmNoBtn) DOM.confirmNoBtn.onclick = closeAllModals;
 if (DOM.infoOkBtn) DOM.infoOkBtn.onclick = () => DOM.infoModal.style.display = 'none';
 if (DOM.editCancelBtn) DOM.editCancelBtn.onclick = () => DOM.editModal.style.display = 'none';
-if (DOM.editSaveBtn) DOM.editSaveBtn.onclick = async () => {
-  const newText = DOM.editMessageText.value.trim();
-  if (!newText) return;
-  closeAllModals();
-  await applyEditMessage(state.modals.editMessageDiv, newText);
-  state.modals.editMessageDiv = null;
-};
-if (DOM.renameCancelBtn) DOM.renameCancelBtn.onclick = () => DOM.renameModal.style.display = 'none';
-if (DOM.renameSaveBtn) DOM.renameSaveBtn.onclick = async () => {
-  const newTitle = DOM.renameChatInput.value.trim();
-  if (newTitle && state.modals.renameChatId) await renameChatById(state.modals.renameChatId, newTitle);
-  closeAllModals();
-  state.modals.renameChatId = null;
-};
 
-// --- Работа с чатами ---
+if (DOM.editSaveBtn) {
+  DOM.editSaveBtn.onclick = async () => {
+    const newText = DOM.editMessageText.value.trim();
+
+    if (!newText) return;
+
+    closeAllModals();
+
+    await applyEditMessage(state.modals.editMessageDiv, newText);
+
+    state.modals.editMessageDiv = null;
+  };
+}
+
+if (DOM.renameCancelBtn) DOM.renameCancelBtn.onclick = () => DOM.renameModal.style.display = 'none';
+
+if (DOM.renameSaveBtn) {
+  DOM.renameSaveBtn.onclick = async () => {
+    const newTitle = DOM.renameChatInput.value.trim();
+
+    if (newTitle && state.modals.renameChatId) {
+      await renameChatById(state.modals.renameChatId, newTitle);
+    }
+
+    closeAllModals();
+    state.modals.renameChatId = null;
+  };
+}
+
+// Управление чатами
 const renderChatList = () => {
   DOM.chatList.innerHTML = '';
+
   state.chats.forEach(chat => {
     const li = document.createElement('li');
     li.dataset.id = chat.id;
+
     if (state.currentChatId === chat.id) li.classList.add('active');
 
     const textSpan = document.createElement('span');
@@ -156,24 +212,34 @@ const renderChatList = () => {
   });
 };
 
+// Загрузить список чатов с сервера
 const loadChats = async () => {
   const res = await fetchJSON('/api/chats?_=' + Date.now());
   state.chats = res;
   renderChatList();
 };
 
+// Переименовать чат
 const renameChatById = async (chatId, newTitle) => {
   try {
     const res = await fetchJSON(`/api/chats/${chatId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle }),
+      body: JSON.stringify({ title: newTitle })
     });
+
     if (res.success) {
       const chat = state.chats.find(c => c.id === chatId);
-      if (chat) chat.title = newTitle;
+
+      if (chat){
+        chat.title = newTitle;
+      }
+
       renderChatList();
-      if (state.currentChatId === chatId) DOM.currentChatTitle.textContent = newTitle;
+
+      if (state.currentChatId === chatId){
+        DOM.currentChatTitle.textContent = newTitle;
+      }
     } else {
       showInfoModal('Ошибка', 'Не удалось переименовать чат');
     }
@@ -182,29 +248,47 @@ const renameChatById = async (chatId, newTitle) => {
   }
 };
 
+// Подтверждение удаления чата
 const deleteChatConfirm = (chatId) => {
   showConfirm('Удалить чат', 'Вы уверены, что хотите удалить этот чат?', async () => {
-    const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+
+    const res = await fetch(`/api/chats/${chatId}`, {
+      method: 'DELETE',
+      headers: authToken ? { 
+        Authorization: `Bearer ${authToken}` 
+      } : {}
+    });
+
     if (res.ok) {
       state.chats = state.chats.filter(c => c.id !== chatId);
+
       renderChatList();
+
       if (state.currentChatId === chatId) {
         if (state.chats.length) await openChat(state.chats[0].id);
         else await createNewChat();
       }
+
     } else {
       showInfoModal('Ошибка', 'Не удалось удалить чат');
     }
   });
 };
 
+// Создать новый чат
 const createNewChat = async () => {
   try {
+
     const newChat = await fetchJSON('/api/chats', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Новый чат' }),
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ 
+        title: 'Новый чат' 
+      })
     });
+
     state.chats.unshift(newChat);
     renderChatList();
     await openChat(newChat.id);
@@ -213,27 +297,35 @@ const createNewChat = async () => {
   }
 };
 
+// Открыть чат
 const openChat = async (chatId) => {
   if (state.streaming) {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
+
   state.currentChatId = chatId;
   renderChatList();
+
   try {
     const chat = await fetchJSON(`/api/chats/${chatId}`);
     DOM.currentChatTitle.textContent = chat.title;
     DOM.chatContainer.innerHTML = '';
+
     if (chat.messages?.length) {
-      for (const msg of chat.messages) await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+      for (const msg of chat.messages) {
+        await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+      }
     } else {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
+
     scrollToBottom();
   } catch (err) {
     console.warn(`Chat ${chatId} not found, reloading list`);
-    // Если чат не найден, перезагружаем список и переключаемся на первый
+
     await loadChats();
+
     if (state.chats.length > 0) {
       await openChat(state.chats[0].id);
     } else {
@@ -241,7 +333,8 @@ const openChat = async (chatId) => {
     }
   }
 };
-// --- Отображение сообщений ---
+
+// Отображение сообщений
 const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
@@ -252,27 +345,39 @@ const appendMessageToDOM = async (role, content, reasoning = null) => {
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
-    const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
+
+    const formatted = typeof marked !== 'undefined'
+      ? marked.parse(content, { 
+        async: false 
+      })
+      : escapeHtml(content);
+
     const reasoningHtml = reasoning ? `<div class="reasoning-block">${escapeHtml(reasoning)}</div>` : '';
     assistantDiv.innerHTML = `${reasoningHtml}<div class="content-block">${formatted}</div>`;
     DOM.chatContainer.appendChild(assistantDiv);
   }
+
   scrollToBottom();
 };
 
+// Создать временный контейнер для потокового ответа
 const createStreamingAssistantContainer = () => {
   const assistantDiv = document.createElement('div');
   assistantDiv.className = 'message assistant';
+
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
   reasoningBlock.style.display = 'none';
+
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
+
   assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
   DOM.chatContainer.appendChild(assistantDiv);
   scrollToBottom();
+
   return { reasoningBlock, contentBlock };
 };
 
@@ -286,40 +391,69 @@ const updateReasoning = (text) => {
 
 const updateContent = (text) => {
   if (state.streamingData.contentDiv) {
-    if (!state.streamingData.contentDiv.dataset.raw) state.streamingData.contentDiv.dataset.raw = '';
+    if (!state.streamingData.contentDiv.dataset.raw) {
+      state.streamingData.contentDiv.dataset.raw = '';
+    }
+
     state.streamingData.contentDiv.dataset.raw += text;
-    const raw = state.streamingData.contentDiv.dataset.raw.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '[Изображение не поддерживается]');
-    state.streamingData.contentDiv.innerHTML = marked.parse(raw, { async: false });
+
+    const raw = state.streamingData.contentDiv.dataset.raw.replace(
+      /!\[.*?\]\(data:image\/[^)]+\)/g,
+      '[Изображение не поддерживается]'
+    );
+
+    state.streamingData.contentDiv.innerHTML = marked.parse(raw, { 
+      async: false 
+    });
+
     scrollToBottom();
   }
 };
 
+// Редактирование сообщения
 const applyEditMessage = async (messageDiv, newText) => {
   if (state.streaming) {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
+
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
   if (index === -1) return;
+
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
-    body: JSON.stringify({ keepIndex: index - 1 }),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { 
+        Authorization: `Bearer ${authToken}` 
+      } : {})
+    },
+
+    body: JSON.stringify({ 
+      keepIndex: index - 1 
+    })
   });
+
   if (!truncateRes.ok) {
     showInfoModal('Ошибка', 'Не удалось обновить историю');
     return;
   }
-  for (let i = index; i < allMessages.length; i++) allMessages[i].remove();
+
+  for (let i = index; i < allMessages.length; i++) {
+    allMessages[i].remove();
+  }
+
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
 };
 
+// Генерация ответа
 const generateNewResponse = async (userMessage) => {
   const { reasoningBlock, contentBlock } = createStreamingAssistantContainer();
   state.streamingData.reasoningDiv = reasoningBlock;
   state.streamingData.contentDiv = contentBlock;
+
   state.streaming = true;
   DOM.sendBtn.disabled = true;
   DOM.stopBtn.style.display = 'inline-block';
@@ -330,28 +464,39 @@ const generateNewResponse = async (userMessage) => {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
       body: JSON.stringify({
         chatId: state.currentChatId,
         newMessage: userMessage,
-        reasoning_effort: reasoningEffort,
+        reasoning_effort: reasoningEffort
       }),
-      signal: state.streamingData.abortController.signal,
+      signal: state.streamingData.abortController.signal
     });
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
     while (true) {
       const { done, value } = await reader.read();
+
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+
+      buffer += decoder.decode(value, { 
+        stream: true 
+      });
+
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
+
             if (data.type === 'reasoning') updateReasoning(data.text);
             else if (data.type === 'content') updateContent(data.text);
             else if (data.type === 'error') updateContent(`Ошибка: ${data.message}`);
@@ -359,12 +504,18 @@ const generateNewResponse = async (userMessage) => {
         }
       }
     }
+
     await loadChats();
+
     const updatedChat = state.chats.find(c => c.id === state.currentChatId);
-    if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title)
+
+    if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
       DOM.currentChatTitle.textContent = updatedChat.title;
+    }
   } catch (err) {
-    if (err.name !== 'AbortError') updateContent(`Ошибка: ${err.message}`);
+    if (err.name !== 'AbortError') {
+      updateContent(`Ошибка: ${err.message}`);
+    }
   } finally {
     state.streaming = false;
     DOM.sendBtn.disabled = false;
@@ -376,60 +527,74 @@ const generateNewResponse = async (userMessage) => {
   }
 };
 
+// Отправить сообщение
 const sendMessage = async () => {
   const text = DOM.userInput.value.trim();
+
   if (!text || state.streaming) return;
+
   DOM.userInput.value = '';
+
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);
 };
 
+// Остановить генерацию ответа
 const stopGeneration = () => {
   if (state.streamingData.abortController) {
     state.streamingData.abortController.abort();
+    
     updateContent('(генерация остановлена)');
+
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';
   }
 };
 
-// --- Загрузка аватара ---
+// Аватар пользователя
 const loadAvatar = async () => {
-  if (!DOM.settingsAvatar) return;
+  if (!DOM.userAvatar) return;
+
   try {
     const res = await fetch('/api/user/avatar', {
       headers: {
         Authorization: `Bearer ${authToken}`,
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        Pragma: 'no-cache'
       }
     });
+
     const data = await res.json();
-    DOM.settingsAvatar.src = data.url || '/default-avatar.svg';
+
+    DOM.userAvatar.src = data.url || '/default-avatar.svg';
   } catch (err) {
     console.warn('Avatar load error:', err);
-    DOM.settingsAvatar.src = '/default-avatar.svg';
+    DOM.userAvatar.src = '/default-avatar.svg';
   }
 };
 
-// --- Авторизация и начальная загрузка ---
+// Авторизация и инициализация
 const checkAuth = async () => {
   try {
     const data = await fetchJSON('/api/auth/status');
+
     if (!data.authenticated) throw new Error('Not authenticated');
+
     state.currentUser = data.username;
+
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
+
     await loadAvatar();
     await loadChats();
-    // Если есть сохранённый ID чата, но его нет в списке – сбросить
+
     if (state.currentChatId && !state.chats.some(c => c.id === state.currentChatId)) {
       state.currentChatId = null;
     }
+
     if (state.chats.length === 0) {
       await createNewChat();
     } else {
-      // Открываем либо текущий чат (если валиден), либо первый
       const chatToOpen = state.currentChatId || state.chats[0].id;
       await openChat(chatToOpen);
     }
@@ -440,9 +605,8 @@ const checkAuth = async () => {
   }
 };
 
-// --- Старт приложения ---
+// Старт приложения
 document.addEventListener('DOMContentLoaded', () => {
-  // Закрытие модалок по клику вне
   window.onclick = (e) => {
     if (e.target === DOM.confirmModal) DOM.confirmModal.style.display = 'none';
     if (e.target === DOM.editModal) DOM.editModal.style.display = 'none';
@@ -456,6 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Отправка сообщения
   DOM.sendBtn?.addEventListener('click', sendMessage);
   DOM.stopBtn?.addEventListener('click', stopGeneration);
+
   DOM.userInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -463,14 +628,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Выпадающее меню пользователя (три точки)
+  // Выпадающее меню
   if (DOM.userMenuTrigger && DOM.userDropdown) {
     DOM.userMenuTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
+
       const isVisible = DOM.userDropdown.style.display === 'block';
       DOM.userDropdown.style.display = isVisible ? 'none' : 'block';
     });
-    // Закрытие при клике вне
     document.addEventListener('click', (e) => {
       if (!DOM.userMenuTrigger.contains(e.target) && !DOM.userDropdown.contains(e.target)) {
         DOM.userDropdown.style.display = 'none';
@@ -478,24 +643,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Выход из системы через меню
+  // Выход из системы
   if (DOM.logoutBtnFromMenu) {
     DOM.logoutBtnFromMenu.addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: authToken ? { 
+          Authorization: `Bearer ${authToken}` 
+        } : {}
+      });
       localStorage.removeItem('auth_token');
       window.location.href = '/auth.html';
     });
   }
 
-  // Бургер-меню и оверлей
+  // Бургер-меню
   const burgerMenu = document.getElementById('burgerMenu');
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
+
   if (burgerMenu && sidebar && sidebarOverlay) {
     const toggleSidebar = () => {
       sidebar.classList.toggle('open');
       sidebarOverlay.classList.toggle('active');
     };
+    
     burgerMenu.addEventListener('click', toggleSidebar);
     sidebarOverlay.addEventListener('click', toggleSidebar);
     window.addEventListener('resize', () => {
@@ -505,6 +677,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Запуск проверки авторизации и загрузки чатов
+  // Запуск проверки авторизации
   checkAuth();
 });
