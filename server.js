@@ -3,6 +3,8 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import OpenAI from 'openai';
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Инициализация
 const app = express();
@@ -472,13 +474,35 @@ app.get('/api/user/avatar', authenticate, async (req, res) => {
   res.json({ url: data?.avatar_url || null });
 });
 
-// Сохранение URL аватара (после загрузки в Storage)
-app.post('/api/user/avatar', authenticate, async (req, res) => {
-  const { avatarUrl } = req.body;
-  if (!avatarUrl) return res.status(400).json({ error: 'No avatar URL' });
-  const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!file.mimetype.startsWith('image/')) return res.status(400).json({ error: 'Not an image' });
+  if (file.size > 5 * 1024 * 1024) return res.status(400).json({ error: 'File too large' });
+
+  const fileExt = file.originalname.split('.').pop();
+  const fileName = `${Date.now()}.${fileExt}`;
+  const filePath = `avatars/${req.user.id}/${fileName}`; // используем user.id (UUID)
+
+  // Загружаем в Storage через supabaseAdmin (обходит RLS)
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from('avatars')
+    .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
+  if (uploadError) {
+    console.error(uploadError);
+    return res.status(500).json({ error: 'Upload failed' });
+  }
+
+  const { data: { publicUrl } } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
+  
+  // Сохраняем URL в профиле
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ avatar_url: publicUrl })
+    .eq('id', req.user.id);
+  if (updateError) return res.status(500).json({ error: 'Failed to update profile' });
+
+  res.json({ url: publicUrl });
 });
 
 // Рассуждения

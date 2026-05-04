@@ -145,26 +145,19 @@ const uploadAvatar = async (file) => {
     return;
   }
 
-  const fileName = `${Date.now()}_${file.name}`;
-  const filePath = `${currentUser}/${fileName}`;
+  const formData = new FormData();
+  formData.append('avatar', file);
 
   try {
-    const { error } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, { upsert: true, contentType: file.type });
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-    const res = await fetch('/api/user/avatar', {
+    const res = await fetch('/api/user/avatar/upload', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ avatarUrl: publicUrl }),
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData,
     });
-    if (!res.ok) throw new Error('Failed to save avatar URL');
-
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
     showInfoModal('Успех', 'Аватар обновлён');
-    await loadAvatar();
+    await loadAvatar(); // перезагружаем аватар
   } catch (err) {
     console.error(err);
     showInfoModal('Ошибка', err.message || 'Не удалось загрузить аватар');
