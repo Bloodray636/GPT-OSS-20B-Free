@@ -8,8 +8,7 @@ const SUPABASE_URL = 'https://dyecqfkxsosimotogahf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_LcA9gkosKrwJ0a1U0V8MRQ_9l2L5Bwg';
 
 // Создаём клиент Supabase (если глобальный ещё не создан)
-const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.supabaseClient = supabase;
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Состояния
 let currentSettings = { theme: 'dark', saveHistory: true };
