@@ -496,7 +496,7 @@ app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async
   const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `avatars/${req.user.id}/${fileName}`;
 
-  // Загружаем файл в Storage через admin
+  // 1. Загружаем файл в Storage через admin
   const { error: uploadError } = await supabaseAdmin.storage
     .from('avatars')
     .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
@@ -507,13 +507,36 @@ app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async
 
   const { data: { publicUrl } } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
 
-  // Создаём или обновляем профиль (upsert)
-  const { error: upsertError } = await supabaseAdmin
+  // 2. Сначала проверяем, существует ли профиль
+  let { data: profile, error: selectError } = await supabaseAdmin
     .from('profiles')
-    .upsert({ id: req.user.id, avatar_url: publicUrl }, { onConflict: 'id' });
-  if (upsertError) {
-    console.error('Upsert error:', upsertError);
-    return res.status(500).json({ error: 'Failed to save avatar URL' });
+    .select('id')
+    .eq('id', req.user.id)
+    .single();
+
+  if (selectError && selectError.code === 'PGRST116') {
+    // Профиль не найден – создаём
+    const { error: insertError } = await supabaseAdmin
+      .from('profiles')
+      .insert({ id: req.user.id, username: req.user.email?.split('@')[0], avatar_url: publicUrl });
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return res.status(500).json({ error: 'Failed to create profile' });
+    }
+  } else if (profile) {
+    // Профиль существует – обновляем аватар
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ avatar_url: publicUrl })
+      .eq('id', req.user.id);
+    if (updateError) {
+      console.error('Update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update profile' });
+    }
+  } else {
+    // Другая ошибка при выборке
+    console.error('Select error:', selectError);
+    return res.status(500).json({ error: 'Failed to check profile' });
   }
 
   res.json({ url: publicUrl });
