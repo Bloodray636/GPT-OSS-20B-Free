@@ -128,7 +128,7 @@ const saveSettings = async () => {
 // ===== Аватар =====
 const loadAvatar = async () => {
   try {
-    const res = await fetchJSON('/api/user/avatar');
+    const res = await fetchJSON('/api/user/avatar?_=' + Date.now());
     DOM.settingsAvatar.src = res.url || '/default-avatar.svg';
   } catch {
     DOM.settingsAvatar.src = '/default-avatar.svg';

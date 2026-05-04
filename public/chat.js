@@ -397,7 +397,7 @@ const stopGeneration = () => {
 // --- Загрузка аватара ---
 const loadAvatar = async () => {
   try {
-    const res = await fetchJSON('/api/user/avatar');
+    const res = await fetchJSON('/api/user/avatar?_=' + Date.now());
     const avatarUrl = res.url || '/default-avatar.svg';
     if (DOM.userAvatar) DOM.userAvatar.src = avatarUrl;
   } catch {
