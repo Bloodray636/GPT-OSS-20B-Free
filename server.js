@@ -468,6 +468,20 @@ app.get('/api/user/avatar', authenticate, async (req, res) => {
   else res.status(404).json({ error: 'Not found' });
 });
 
+app.get('/api/user/avatar', authenticate, async (req, res) => {
+  const username = req.user.email?.split('@')[0];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('avatar_url')
+    .eq('username', username)
+    .single();
+
+  if (error || !data?.avatar_url) {
+    return res.status(404).json({ error: 'Avatar not found.' });
+  }
+  res.json({ url: data.avatar_url });
+});
+
 // Сохранение URL аватара (после загрузки в Storage)
 app.post('/api/user/avatar', authenticate, async (req, res) => {
   const { avatarUrl } = req.body;
