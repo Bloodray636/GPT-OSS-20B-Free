@@ -114,6 +114,12 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Инициализируем глобальный объект
+    const SUPABASE_URL = 'https://dyecqfkxsosimotogahf.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_LcA9gkosKrwJ0a1U0V8MRQ_9l2L5Bwg';
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
   <script src="settings.js"></script>
 </body>
 </html>

@@ -1,20 +1,11 @@
 // public/settings.js
 
-// Глобальный токен
+// ===== Глобальные переменные =====
 let authToken = localStorage.getItem('auth_token');
-
-// Конфигурация Supabase (замените на свои данные)
-const SUPABASE_URL = 'https://dyecqfkxsosimotogahf.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_LcA9gkosKrwJ0a1U0V8MRQ_9l2L5Bwg';
-
-// Создаём клиент Supabase (если глобальный ещё не создан)
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Состояния
 let currentSettings = { theme: 'dark', saveHistory: true };
 let currentUser = null;
 
-// DOM элементы
+// ===== DOM элементы =====
 const DOM = {
   saveHistoryToggle: document.getElementById('saveHistoryToggle'),
   themeToggle: document.getElementById('themeToggle'),
@@ -55,10 +46,10 @@ const DOM = {
   saveUsernameBtn: document.getElementById('saveUsernameBtn'),
 };
 
-// Утилиты
+// ===== Утилиты =====
 const fetchJSON = async (url, options = {}) => {
   const headers = options.headers || {};
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
     localStorage.removeItem('auth_token');
@@ -88,10 +79,13 @@ const showConfirm = (title, message, onConfirm) => {
 
 const closeAllModals = () => {
   const modals = [
-    DOM.changePasswordModal, DOM.changeUsernameModal, DOM.confirmModal,
-    DOM.infoModal, DOM.deleteAccountModal
+    DOM.changePasswordModal,
+    DOM.changeUsernameModal,
+    DOM.confirmModal,
+    DOM.infoModal,
+    DOM.deleteAccountModal,
   ];
-  modals.forEach(m => { if (m) m.style.display = 'none'; });
+  modals.forEach(m => m && (m.style.display = 'none'));
 };
 
 const applyTheme = (theme) => {
@@ -99,12 +93,12 @@ const applyTheme = (theme) => {
   document.body.classList.toggle('light', theme === 'light');
 };
 
-// Загрузка настроек и данных пользователя
+// ===== Загрузка данных пользователя и настроек =====
 const loadUserData = async () => {
   try {
     const [settings, status] = await Promise.all([
       fetchJSON('/api/settings'),
-      fetchJSON('/api/auth/status')
+      fetchJSON('/api/auth/status'),
     ]);
     currentSettings = settings;
     currentUser = status.username;
@@ -131,54 +125,37 @@ const saveSettings = async () => {
   showInfoModal('Успех', 'Настройки сохранены');
 };
 
-// --- Аватар (рабочая версия) ---
+// ===== Аватар =====
 const loadAvatar = async () => {
   try {
     const res = await fetchJSON('/api/user/avatar');
-    if (res.url) {
-      DOM.settingsAvatar.src = res.url;
-    } else {
-      DOM.settingsAvatar.src = '/default-avatar.svg';
-    }
+    DOM.settingsAvatar.src = res.url || '/default-avatar.svg';
   } catch {
     DOM.settingsAvatar.src = '/default-avatar.svg';
   }
 };
 
 const uploadAvatar = async (file) => {
-  // Проверяем, что файл – изображение
   if (!file.type.startsWith('image/')) {
-    showInfoModal('Ошибка', 'Пожалуйста, выберите изображение');
+    showInfoModal('Ошибка', 'Выберите изображение');
     return;
   }
-  // Ограничим размер (5 MB)
   if (file.size > 5 * 1024 * 1024) {
-    showInfoModal('Ошибка', 'Файл не должен превышать 5 МБ');
+    showInfoModal('Ошибка', 'Файл не более 5 МБ');
     return;
   }
 
-  // Путь в Storage: avatars/{user_id}/{timestamp}.ext
-  const userId = currentUser; // или можно получить из JWT, но currentUser это username, а не UUID.
-  // Лучше получить реальный ID пользователя через /api/auth/status (но у нас есть только username). 
-  // Для простоты будем использовать имя пользователя (оно уникально), но это не совсем безопасно для Storage.
-  // Альтернатива: добавить эндпоинт /api/user/id, возвращающий uuid. 
-  // Или генерать уникальное имя на клиенте.
   const fileName = `${Date.now()}_${file.name}`;
-  const filePath = `${currentUser}/${fileName}`; // папка по имени пользователя
+  const filePath = `${currentUser}/${fileName}`;
 
   try {
-    // Загружаем файл в Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('avatars')
       .upload(filePath, file, { upsert: true, contentType: file.type });
     if (error) throw error;
 
-    // Получаем публичный URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-    // Сохраняем URL в профиле
     const res = await fetch('/api/user/avatar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
@@ -187,30 +164,32 @@ const uploadAvatar = async (file) => {
     if (!res.ok) throw new Error('Failed to save avatar URL');
 
     showInfoModal('Успех', 'Аватар обновлён');
-    await loadAvatar(); // перезагружаем аватар
+    await loadAvatar();
   } catch (err) {
-    console.error('Upload error:', err);
-    showInfoModal('Ошибка', 'Не удалось загрузить аватар: ' + (err.message || 'неизвестная ошибка'));
+    console.error(err);
+    showInfoModal('Ошибка', err.message || 'Не удалось загрузить аватар');
   }
 };
 
-// Смена пароля
+// ===== Профиль (пароль, никнейм) =====
 const changePassword = async () => {
   const oldPwd = DOM.oldPasswordInput.value;
   const newPwd = DOM.newPasswordInput.value;
   const confirmPwd = DOM.confirmPasswordInput.value;
+
   if (!oldPwd || !newPwd || !confirmPwd) {
     DOM.passwordError.textContent = 'Заполните все поля';
     return;
   }
   if (newPwd !== confirmPwd) {
-    DOM.passwordError.textContent = 'Новые пароли не совпадают';
+    DOM.passwordError.textContent = 'Пароли не совпадают';
     return;
   }
   if (newPwd.length < 6) {
-    DOM.passwordError.textContent = 'Пароль должен быть не менее 6 символов';
+    DOM.passwordError.textContent = 'Пароль не менее 6 символов';
     return;
   }
+
   try {
     await fetchJSON('/api/auth/change-password', {
       method: 'POST',
@@ -226,7 +205,6 @@ const changePassword = async () => {
   }
 };
 
-// Смена никнейма
 const changeUsername = async () => {
   const newName = DOM.newUsernameInput.value.trim();
   if (!newName) {
@@ -234,9 +212,10 @@ const changeUsername = async () => {
     return;
   }
   if (newName.length < 3 || !/^[a-zA-Z0-9_]+$/.test(newName)) {
-    DOM.usernameError.textContent = 'Мин. 3 символа, буквы/цифры/_';
+    DOM.usernameError.textContent = 'Минимум 3 символа, буквы/цифры/_';
     return;
   }
+
   try {
     await fetchJSON('/api/auth/change-username', {
       method: 'POST',
@@ -253,7 +232,7 @@ const changeUsername = async () => {
   }
 };
 
-// Удаление всех чатов
+// ===== Управление данными =====
 const deleteAllChats = () => {
   showConfirm('Удалить все чаты', 'Все чаты будут удалены безвозвратно. Продолжить?', async () => {
     await fetch('/api/chats/all', { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
@@ -261,7 +240,6 @@ const deleteAllChats = () => {
   });
 };
 
-// Удаление аккаунта
 const deleteAccount = () => {
   DOM.deleteAccountModal.style.display = 'flex';
 };
@@ -290,7 +268,7 @@ if (DOM.confirmDeleteAccountBtn) {
   };
 }
 
-// Инициализация обработчиков
+// ===== Инициализация обработчиков =====
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData();
   await loadAvatar();
@@ -308,20 +286,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (DOM.changeAvatarBtn) DOM.changeAvatarBtn.onclick = () => DOM.avatarInput.click();
   if (DOM.avatarInput) {
     DOM.avatarInput.onchange = (e) => {
-      if (e.target.files && e.target.files[0]) uploadAvatar(e.target.files[0]);
+      if (e.target.files[0]) uploadAvatar(e.target.files[0]);
     };
   }
 
   document.querySelectorAll('.toggle-password').forEach(btn => {
     btn.addEventListener('click', () => {
-      const targetId = btn.getAttribute('data-target');
-      const input = document.getElementById(targetId);
+      const input = document.getElementById(btn.dataset.target);
       if (input) input.type = input.type === 'password' ? 'text' : 'password';
     });
   });
 
-  window.onclick = (e) => {
-    if (e.target.classList.contains('modal')) e.target.style.display = 'none';
-  };
+  window.addEventListener('click', (e) => {
+    if (e.target.classList?.contains('modal')) e.target.style.display = 'none';
+  });
   DOM.infoOkBtn.onclick = () => DOM.infoModal.style.display = 'none';
 });
