@@ -464,17 +464,12 @@ app.delete('/api/chats/all', authenticate, async (req, res) => {
 // Аватары
 
 app.get('/api/user/avatar', authenticate, async (req, res) => {
-  const username = req.user.email?.split('@')[0];
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('avatar_url')
-    .eq('username', username)
+    .eq('id', req.user.id)
     .single();
-
-  if (error || !data?.avatar_url) {
-    return res.status(404).json({ error: 'Avatar not found.' });
-  }
-  res.json({ url: data.avatar_url });
+  res.json({ url: data?.avatar_url || null });
 });
 
 // Сохранение URL аватара (после загрузки в Storage)
