@@ -496,25 +496,24 @@ app.post('/api/user/avatar/upload', authenticate, upload.single('avatar'), async
   const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `avatars/${req.user.id}/${fileName}`;
 
-  // 1. Загружаем файл в Storage через admin
+  // Загружаем файл в Storage через admin
   const { error: uploadError } = await supabaseAdmin.storage
     .from('avatars')
     .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
   if (uploadError) {
-    console.error(uploadError);
+    console.error('Upload error:', uploadError);
     return res.status(500).json({ error: 'Upload failed' });
   }
 
   const { data: { publicUrl } } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
 
-  // 2. Обновляем профиль через admin (обходит RLS)
-  const { error: updateError } = await supabaseAdmin
+  // Создаём или обновляем профиль (upsert)
+  const { error: upsertError } = await supabaseAdmin
     .from('profiles')
-    .update({ avatar_url: publicUrl })
-    .eq('id', req.user.id);
-  if (updateError) {
-    console.error(updateError);
-    return res.status(500).json({ error: 'Failed to update profile' });
+    .upsert({ id: req.user.id, avatar_url: publicUrl }, { onConflict: 'id' });
+  if (upsertError) {
+    console.error('Upsert error:', upsertError);
+    return res.status(500).json({ error: 'Failed to save avatar URL' });
   }
 
   res.json({ url: publicUrl });
