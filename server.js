@@ -181,7 +181,8 @@ app.post('/api/auth/register', async (req, res) => {
 
         return res.json({ 
           success: true, 
-          token: signData.session?.access_token 
+          token: signData.session?.access_token,
+          refresh_token: signData.session?.refresh_token
         });
       }
 
@@ -205,7 +206,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     return res.json({ 
       success: true, 
-      token: signData.session?.access_token 
+      token: signData.session?.access_token,
+      refresh_token: signData.session?.refresh_token
     });
 
   } catch (err) {
@@ -246,9 +248,10 @@ app.post('/api/auth/login', async (req, res) => {
 
   if (error) return res.status(401).json({ error: 'Invalid credentials' });
 
-  res.json({ 
-    success: true, 
-    token: data.session?.access_token 
+  res.json({
+    success: true,
+    token: data.session?.access_token,
+    refresh_token: data.session?.refresh_token
   });
 });
 
