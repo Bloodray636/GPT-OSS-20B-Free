@@ -214,6 +214,27 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Обновление access_token по refresh_token
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refresh_token } = req.body;
+
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'No refresh token' });
+  }
+
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+  if (error) {
+    console.error('Refresh error:', error);
+    return res.status(401).json({ error: error.message });
+  }
+
+  res.json({
+    access_token: data.session?.access_token,
+    refresh_token: data.session?.refresh_token
+  });
+});
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 

@@ -65,17 +65,27 @@ const scrollToBottom = () => {
 };
 
 // Подстановка токена
-const fetchJSON = async (url, options = {}) => {
+const fetchJSON = async (url, options = {}, retry = true) => {
   const headers = options.headers || {};
-
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
-  const res = await fetch(url, { 
-    ...options, headers 
-  });
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 && retry) {
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      // повторяем запрос с новым токеном, но без повторной попытки (чтобы не зациклиться)
+      return fetchJSON(url, options, false);
+    } else {
+      // обновление не удалось – очищаем токены и редиректим на логин
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/auth.html';
+      throw new Error('Session expired');
+    }
+  }
 
   if (!res.ok) throw new Error(await res.text());
-
   return res.json();
 };
 
@@ -577,12 +587,13 @@ const loadAvatar = async () => {
 // Авторизация и инициализация
 const checkAuth = async () => {
   try {
-    const data = await fetchJSON('/api/auth/status');
+    // Попытка обновить токен при загрузке страницы, если он есть
+    await refreshToken();
 
+    const data = await fetchJSON('/api/auth/status');
     if (!data.authenticated) throw new Error('Not authenticated');
 
     state.currentUser = data.username;
-
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
 
     await loadAvatar();
@@ -601,7 +612,33 @@ const checkAuth = async () => {
   } catch (err) {
     console.error('Auth check failed:', err);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
     window.location.href = '/auth.html';
+  }
+};
+
+const refreshToken = async () => {
+  const refresh_token = localStorage.getItem('refresh_token');
+  if (!refresh_token) return false;
+
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.access_token) {
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      authToken = data.access_token;
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    return false;
   }
 };
 
@@ -652,7 +689,9 @@ document.addEventListener('DOMContentLoaded', () => {
           Authorization: `Bearer ${authToken}` 
         } : {}
       });
+
       localStorage.removeItem('auth_token');
+      localStorage.setItem('refresh_token');
       window.location.href = '/auth.html';
     });
   }

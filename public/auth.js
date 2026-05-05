@@ -45,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.token) localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         window.location.href = '/chat.html';
       } else {
         loginError.textContent = data.error || 'Ошибка входа';
@@ -91,7 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.token) localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('refresh_token', data.refresh_token);
         window.location.href = '/chat.html';
       } else {
         registerError.textContent = data.error || 'Ошибка регистрации';
