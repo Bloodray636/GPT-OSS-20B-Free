@@ -58,7 +58,7 @@ body.light {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  height: 90vh;
+  height: 80vh;
   background: var(--bg-primary);
   color: var(--text-primary);
   transition: background 0.2s, color 0.2s;
