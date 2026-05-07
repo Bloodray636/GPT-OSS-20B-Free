@@ -13,35 +13,86 @@
       <h1>Настройки</h1>
     </div>
 
-    <div class="settings-block">
-      <h3>Интерфейс</h3>
-      <label><input type="checkbox" id="saveHistoryToggle"> Сохранять историю чатов</label>
-      <label><input type="checkbox" id="themeToggle"> Тёмная тема</label>
+    <!-- Вкладки -->
+    <div class="settings-tabs">
+      <button class="tab-btn active" data-tab="general">Общие</button>
+      <button class="tab-btn" data-tab="profile">Профиль</button>
+      <button class="tab-btn" data-tab="data">Данные</button>
     </div>
 
-    <div class="settings-block">
-      <h3>Профиль</h3>
-      <div class="settings-row">
-        <span>Аватар:</span>
-        <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
-        <button id="changeAvatarBtn" class="small-btn">Сменить</button>
-        <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display: none;">
+    <!-- Общие настройки -->
+    <div id="tab-general" class="tab-pane active">
+      <div class="settings-block">
+        <h3>Тема</h3>
+        <div class="theme-selector">
+          <label>
+            <input type="radio" name="theme" value="light"> Светлая
+          </label>
+          <label>
+            <input type="radio" name="theme" value="dark" checked> Тёмная
+          </label>
+        </div>
       </div>
-      <div class="settings-row">
-        <span>Никнейм:</span>
-        <span id="currentUsername"></span>
-        <button id="changeUsernameBtn" class="small-btn">Изменить</button>
+    </div>
+
+    <!-- Профиль -->
+    <div id="tab-profile" class="tab-pane">
+      <div class="settings-block">
+        <h3>Аватар</h3>
+        <div class="avatar-row">
+          <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
+          <button id="changeAvatarBtn" class="small-btn">Сменить</button>
+          <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+        </div>
       </div>
-      <button id="changePasswordBtn" class="small-btn">Сменить пароль</button>
+
+      <div class="settings-block">
+        <h3>Пароль</h3>
+        <div class="info-row">
+          <span>Пароль:</span>
+          <div class="password-field">
+            <input type="password" id="displayPassword" value="········" disabled>
+            <span class="toggle-password" data-target="displayPassword">👁️</span>
+          </div>
+          <button id="changePasswordBtn" class="small-btn">Изменить пароль</button>
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <h3>Личная информация</h3>
+        <div class="info-row">
+          <span>Ник:</span>
+          <span id="profileUsername"></span>
+        </div>
+        <div class="info-row">
+          <span>Адрес электронной почты:</span>
+          <span id="profileEmail"></span>
+        </div>
+        <div class="info-row">
+          <span>Номер телефона:</span>
+          <span>не указан</span>
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <h3>Опасная зона</h3>
+        <div class="danger-row">
+          <span>Удалить аккаунт</span>
+          <button id="deleteAccountBtn" class="danger-outline-btn">Удалить</button>
+        </div>
+      </div>
     </div>
 
-    <div class="settings-block">
-      <h3>Управление данными</h3>
-      <button id="deleteAllChatsBtn" class="danger-btn">Удалить все чаты</button>
-      <button id="deleteAccountBtn" class="danger-btn">Удалить аккаунт</button>
+    <!-- Данные -->
+    <div id="tab-data" class="tab-pane">
+      <div class="settings-block">
+        <h3>Управление данными</h3>
+        <div class="danger-row">
+          <span>Удалить все чаты</span>
+          <button id="deleteAllChatsBtn" class="danger-outline-btn">Удалить все</button>
+        </div>
+      </div>
     </div>
-
-    <button id="saveSettingsBtn" class="save-btn">Сохранить настройки</button>
   </div>
 
   <!-- Модальное окно смены пароля -->

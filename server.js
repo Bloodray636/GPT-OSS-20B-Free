@@ -258,7 +258,11 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => res.json({ success: true }));
 
 app.get('/api/auth/status', authenticate, (req, res) => {
-  res.json({ authenticated: true, username: req.user.email?.split('@')[0] });
+  res.json({ 
+    authenticated: true, 
+    username: req.user.email?.split('@')[0],
+    email: req.user.email
+  });
 });
 
 app.post('/api/auth/change-password', authenticate, async (req, res) => {
