@@ -1,6 +1,3 @@
-/* ============================================
-   ПЕРЕМЕННЫЕ (тёмная тема по умолчанию)
-============================================ */
 :root {
   --bg-primary: #0a0c10;
   --bg-secondary: #11151c;
@@ -27,7 +24,6 @@
   --glass-bg: rgba(17, 21, 28, 0.9);
 }
 
-/* ----- Светлая тема ----- */
 body.light {
   --bg-primary: #f7fafc;
   --bg-secondary: #ffffff;
@@ -54,7 +50,6 @@ body.light {
   --glass-bg: rgba(255, 255, 255, 0.95);
 }
 
-/* ========== Базовые сбросы ========== */
 * {
   margin: 0;
   padding: 0;
@@ -69,7 +64,6 @@ body {
   transition: background 0.2s, color 0.2s;
 }
 
-/* ========== Скроллбар ========== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -86,7 +80,6 @@ body {
   background: var(--text-secondary);
 }
 
-/* ========== Общие UI-компоненты ========== */
 button, .button {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -134,14 +127,12 @@ input:focus, textarea:focus {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-/* ========== Основная раскладка ========== */
 .app {
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ========== Боковая панель ========== */
 .sidebar {
   width: 280px;
   background: var(--bg-secondary);
@@ -239,7 +230,6 @@ input:focus, textarea:focus {
   font-weight: 500;
 }
 
-/* ========== Основная область чата ========== */
 .main {
   flex: 1;
   display: flex;
@@ -271,7 +261,6 @@ input:focus, textarea:focus {
   gap: 1.2rem;
 }
 
-/* ========== Сообщения ========== */
 .message {
   display: flex;
   flex-direction: column;
@@ -347,7 +336,6 @@ input:focus, textarea:focus {
   color: white;
 }
 
-/* ========== Поле ввода ========== */
 .input-area {
   display: flex;
   flex-direction: column;
@@ -371,52 +359,38 @@ input:focus, textarea:focus {
   min-height: 44px;
   max-height: 150px;
 }
-#sendBtn {
-  background: var(--accent);
+#sendBtn, #stopBtn {
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 40px;
-  padding: 0.5px 1px;
   font-size: 1.2rem;
   cursor: pointer;
   transition: 0.2s;
-  width: 48px;
-  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-#sendBtn svg{
+#sendBtn {
+  background: var(--accent);
+}
+#sendBtn svg {
   fill: #ffffff;
   width: 54%;
   height: 54%;
 }
-
 #sendBtn:hover {
   background: var(--accent-hover);
   transform: scale(1.02);
 }
 #stopBtn {
   background: var(--danger);
-  border: none;
-  border-radius: 40px;
-  padding: 0.5px 1px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: 0.2s;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-
-#stopBtn svg{
+#stopBtn svg {
   fill: #fff;
   width: 70%;
   height: 70%;
 }
-
 #stopBtn:hover {
   background: var(--danger-hover);
   transform: scale(1.02);
@@ -430,17 +404,7 @@ input:focus, textarea:focus {
   color: var(--text-primary);
   width: 100%;
 }
-@media (max-width: 768px) {
-  .input-area {
-    padding: 0.8rem 1rem;
-  }
-  #sendBtn, #stopBtn {
-    width: 44px;
-    height: 44px;
-  }
-}
 
-/* ========== Модальные окна ========== */
 .modal {
   display: none;
   position: fixed;
@@ -614,7 +578,6 @@ input:focus, textarea:focus {
   margin-bottom: 10px;
 }
 
-/* ========== Markdown-стили в ответах ассистента ========== */
 .content-block {
   line-height: 1.6;
 }
@@ -673,51 +636,8 @@ input:focus, textarea:focus {
   border-top: 1px solid var(--border);
   margin: 1rem 0;
 }
+
 @media (max-width: 768px) {
-  /* Убираем любой sticky или absolute у поля ввода */
-  .input-area {
-    position: relative !important;
-    bottom: auto !important;
-    padding: 0.8rem 1rem !important;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px)) !important;
-    margin: 0 !important;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
-  }
-
-  /* Делаем отступ внизу у контейнера чата, чтобы при прокрутке поле было видно */
-  .chat-container {
-    padding-bottom: 90px !important;
-  }
-
-  /* При фокусе на поле прокручиваем страницу вниз так, чтобы поле оказалось видимым */
-  #userInput:focus {
-    scroll-margin-bottom: 120px;
-  }
-
-  /* Для старых браузеров, которые не поддерживают env */
-  @supports not (padding-bottom: env(safe-area-inset-bottom)) {
-    .input-area {
-      padding-bottom: 1.5rem !important;
-    }
-    .chat-container {
-      padding-bottom: 80px !important;
-    }
-  }
-}
-
-/* Для устройств с жестами (Samsung) */
-@media (max-width: 768px) and (pointer: coarse) {
-  .input-area {
-    padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 24px)) !important;
-  }
-  .chat-container {
-    padding-bottom: 100px !important;
-  }
-}
-/* ========== АДАПТИВНОСТЬ (ТЕЛЕФОНЫ) ========== */
-@media (max-width: 768px) {
-  /* Боковая панель и бургер */
   .burger-menu {
     display: inline-block;
     background: transparent;
@@ -759,8 +679,6 @@ input:focus, textarea:focus {
     display: block;
     opacity: 1;
   }
-
-  /* Основная область */
   .main {
     width: 100%;
     display: flex;
@@ -781,8 +699,6 @@ input:focus, textarea:focus {
   .chat-controls {
     margin-left: auto;
   }
-
-  /* Контейнер чата – растягивается на всё свободное место */
   .chat-container {
     flex: 1;
     overflow-y: auto;
@@ -790,8 +706,6 @@ input:focus, textarea:focus {
     gap: 1rem;
     padding-bottom: 0.8rem;
   }
-
-  /* Поле ввода – прилипает к низу с отступом под системную панель */
   .input-area {
     position: sticky;
     bottom: 0;
@@ -808,32 +722,30 @@ input:focus, textarea:focus {
       padding-bottom: 1.2rem;
     }
   }
-  /* Дополнительный отступ для устройств с жестами (Samsung) */
   @media (pointer: coarse) {
     .input-area {
       padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px));
     }
   }
-
   #userInput {
-    font-size: 16px; /* отключает масштабирование при фокусе */
+    font-size: 16px;
     padding: 0.7rem 1rem;
     min-height: 48px;
   }
   button#sendBtn, button#stopBtn {
-    padding: 0.5rem 1.2rem;
-    min-width: 70px;
+    width: 44px;
+    height: 44px;
   }
-
-  /* Сообщения */
+  .reasoning-select-bottom {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
   .message {
     max-width: 95%;
   }
   .bubble, .content-block {
     font-size: 1rem;
   }
-
-  /* Модальные окна */
   .modal-content {
     min-width: 260px;
     padding: 1.2rem;
@@ -847,14 +759,10 @@ input:focus, textarea:focus {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
   }
-
-  /* Иконка редактирования */
   .edit-icon {
     font-size: 0.7rem;
     padding: 2px 6px;
   }
-
-  /* Настройки – строки в колонку */
   .settings-row {
     flex-direction: column;
     align-items: stretch;
@@ -863,15 +771,71 @@ input:focus, textarea:focus {
   .settings-row button {
     width: 100%;
   }
-
-  /* Аватар */
   .user-avatar {
     width: 50px;
     height: 50px;
   }
+  .content-block {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .content-block p {
+    margin-bottom: 0.8em;
+  }
+  .content-block ul, .content-block ol {
+    margin-left: 1.2rem;
+    margin-bottom: 0.8em;
+  }
+  .content-block li {
+    margin-bottom: 0.3em;
+  }
+  .content-block h1 {
+    font-size: 1.4rem;
+    margin-top: 0.8em;
+  }
+  .content-block h2 {
+    font-size: 1.3rem;
+    margin-top: 0.7em;
+  }
+  .content-block h3 {
+    font-size: 1.2rem;
+    margin-top: 0.6em;
+  }
+  .content-block blockquote {
+    margin-left: 0.5rem;
+    padding-left: 0.8rem;
+    font-size: 0.95rem;
+  }
+  .content-block code {
+    font-size: 0.85rem;
+    padding: 0.1rem 0.3rem;
+  }
+  .content-block pre {
+    font-size: 0.85rem;
+    padding: 0.8rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .content-block table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  .content-block th, .content-block td {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .reasoning-block {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.8rem;
+  }
 }
 
-/* Для очень маленьких экранов (≤480px) */
 @media (max-width: 480px) {
   .chat-header {
     flex-wrap: wrap;
@@ -894,9 +858,27 @@ input:focus, textarea:focus {
   .settings-row button {
     width: 100%;
   }
+  .content-block {
+    font-size: 0.95rem;
+  }
+  .content-block h1 {
+    font-size: 1.3rem;
+  }
+  .content-block h2 {
+    font-size: 1.2rem;
+  }
+  .content-block h3 {
+    font-size: 1.1rem;
+  }
+  .content-block pre, .content-block code {
+    font-size: 0.8rem;
+  }
+  .content-block th, .content-block td {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+  }
 }
 
-/* ========== СТРАНИЦА АВТОРИЗАЦИИ ========== */
 .auth-page {
   min-height: 100vh;
   background: radial-gradient(circle at 10% 30%, #0f0c29, #1a1a3a, #24243e);
@@ -996,6 +978,7 @@ body.light .auth-page {
   text-align: center;
   font-size: 0.85rem;
 }
+
 .avatar-container {
   text-align: center;
   margin-bottom: 0.5rem;
@@ -1015,7 +998,6 @@ body.light .auth-page {
   object-fit: cover;
 }
 
-/* Страница настроек */
 .settings-container {
   max-width: 600px;
   margin: 0 auto;
@@ -1053,12 +1035,6 @@ body.light .auth-page {
 .settings-block label {
   display: block;
   margin-bottom: 0.8rem;
-}
-.settings-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 1rem;
 }
 .save-btn {
   width: 100%;
@@ -1164,17 +1140,7 @@ body.light .auth-page {
 .tab-pane.active {
   display: block;
 }
-/* Блоки настроек */
-.settings-block {
-  background: var(--bg-secondary);
-  border-radius: 24px;
-  padding: 1.2rem;
-  margin-bottom: 1.5rem;
-}
-.settings-block h3 {
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
+
 .theme-selector {
   display: flex;
   gap: 1.5rem;
