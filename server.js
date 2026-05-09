@@ -166,6 +166,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 
   try {
+    // Шаг 1: создание пользователя через Admin API
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -175,8 +176,11 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (error) {
       if (error.message.includes('already been registered')) {
+        // Пользователь уже существует — пробуем войти
         const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signError) return res.status(409).json({ error: 'User exists but wrong credentials' });
+        if (signError) {
+          return res.status(409).json({ error: 'User exists but wrong credentials' });
+        }
         return res.json({ 
           success: true, 
           token: signData.session?.access_token,
@@ -188,35 +192,38 @@ app.post('/api/auth/register', async (req, res) => {
 
     const userId = data.user.id;
 
-    // Настройки по умолчанию (фоновая операция)
-    supabase
-      .from('user_settings')
-      .upsert({ user_id: userId, theme: 'dark', save_history: true }, { onConflict: 'user_id' })
-      .catch(err => console.error('Failed to insert user_settings:', err));
+    // Шаг 2: фоновое создание настроек и профиля (через admin, чтобы обойти RLS)
+    // Не ждём и не даём упасть всему запросу
+    Promise.all([
+      supabaseAdmin.from('user_settings').upsert(
+        { user_id: userId, theme: 'dark', save_history: true },
+        { onConflict: 'user_id' }
+      ),
+      supabaseAdmin.from('profiles').upsert(
+        { id: userId, username },
+        { onConflict: 'id' }
+      )
+    ]).catch(err => console.error('Failed to create user_settings/profile:', err));
 
-    // Создаём профиль, чтобы избежать проблем с аватарами и username
-    supabase
-      .from('profiles')
-      .upsert({ id: userId, username }, { onConflict: 'id' })
-      .catch(err => console.error('Failed to insert profile:', err));
-
-    // Небольшая задержка перед попыткой входа (репликация данных)
+    // Шаг 3: небольшая задержка перед попыткой входа (нужно для репликации)
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Шаг 4: попытка получить токен — НЕ ДОЛЖНА ВЫЗЫВАТЬ 500 ПРИ ЛЮБОЙ ОШИБКЕ
     let token = null;
     let refreshToken = null;
     try {
       const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-      if (!signError && signData.session) {
+      if (!signError && signData?.session) {
         token = signData.session.access_token;
         refreshToken = signData.session.refresh_token;
       } else {
-        console.error('Sign in after registration failed (non-critical):', signError);
+        console.warn('SignIn after registration failed (non-critical):', signError);
       }
     } catch (signErr) {
-      console.error('Exception during sign in after registration:', signErr);
+      console.warn('SignIn after registration threw an exception (non-critical):', signErr);
     }
 
+    // Всегда возвращаем успех, даже если не получили токен
     return res.json({ 
       success: true, 
       token,
@@ -225,6 +232,7 @@ app.post('/api/auth/register', async (req, res) => {
 
   } catch (err) {
     console.error('FATAL registration error:', err);
+    console.error('Stack:', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
