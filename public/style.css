@@ -635,6 +635,10 @@ input:focus, textarea:focus {
   margin: 1rem 0;
 }
 
+.burger-menu{
+  display: none;
+}
+
 @media (max-width: 768px) {
   .burger-menu {
     display: inline-block;
