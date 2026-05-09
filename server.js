@@ -191,13 +191,15 @@ app.post('/api/auth/register', async (req, res) => {
 
     const userId = data.user.id;
     // Настройки по умолчанию
-    await supabase
+    supabase
       .from('user_settings')
       .upsert({ 
         user_id: userId, 
         theme: 'dark', 
         save_history: true 
-      }, { onConflict: 'user_id' })
+      }, { 
+        onConflict: 'user_id' 
+      })
       .catch(() => null);
 
     const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });

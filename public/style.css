@@ -1162,6 +1162,7 @@ body.light .auth-page {
   cursor: pointer;
 }
 .theme-selector input[type="radio"] {
+  padding: 0px;
   appearance: none;
   width: 18px;
   height: 18px;
