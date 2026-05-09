@@ -1209,3 +1209,65 @@ body.light .auth-page {
   background: var(--danger);
   color: white;
 }
+
+.copy-response-btn, .copy-code-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 5;
+  color: var(--text-secondary);
+}
+.message.assistant:hover .copy-response-btn,
+pre:hover .copy-code-btn {
+  opacity: 1;
+}
+.copy-response-btn:hover, .copy-code-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+.message.assistant {
+  position: relative;
+}
+pre {
+  position: relative;
+}
+
+.chat-menu-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+.chat-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 130px;
+  z-index: 25;
+  box-shadow: var(--shadow-sm);
+}
+.chat-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.chat-dropdown button:hover {
+  background: var(--bg-hover);
+}

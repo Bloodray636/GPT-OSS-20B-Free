@@ -18,7 +18,7 @@ const state = {
   }
 };
 
-// DOM
+// DOM элементы
 const DOM = {
   chatContainer: document.getElementById('chatContainer'),
   userInput: document.getElementById('userInput'),
@@ -54,63 +54,86 @@ const DOM = {
 
 // Утилиты
 const escapeHtml = (str) =>
-  str.replace(/[&<>]/g, (m) => ({ 
-    '&': '&amp;', 
-    '<': '&lt;', 
-    '>': '&gt;' 
-  }[m]));
+  str.replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 
 const scrollToBottom = () => {
   DOM.chatContainer.scrollTop = DOM.chatContainer.scrollHeight;
 };
 
-// Подстановка токена
+// Копирование кода из блоков <pre>
+const attachCopyToCodeBlocks = (container) => {
+  if (!container) return;
+  container.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector('.copy-code-btn')) return;
+    const copyBtn = document.createElement('div');
+    copyBtn.className = 'copy-code-btn';
+    copyBtn.textContent = '📋';
+    copyBtn.title = 'Копировать код';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const code = pre.querySelector('code')?.innerText || pre.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        showInfoModal('Успех', 'Код скопирован');
+      }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать код'));
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(copyBtn);
+  });
+};
+
+// Обновление токена
+const refreshToken = async () => {
+  const refresh_token = localStorage.getItem('refresh_token');
+  if (!refresh_token) return false;
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token })
+    });
+    const data = await res.json();
+    if (res.ok && data.access_token) {
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      authToken = data.access_token;
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    return false;
+  }
+};
+
+// Запрос с авторизацией
 const fetchJSON = async (url, options = {}, retry = true) => {
   const headers = options.headers || {};
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
   const res = await fetch(url, { ...options, headers });
-
   if (res.status === 401 && retry) {
     const refreshed = await refreshToken();
-    if (refreshed) {
-      // повторяем запрос с новым токеном, но без повторной попытки (чтобы не зациклиться)
-      return fetchJSON(url, options, false);
-    } else {
-      // обновление не удалось – очищаем токены и редиректим на логин
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('refresh_token');
-      window.location.href = '/auth.html';
-      throw new Error('Session expired');
-    }
+    if (refreshed) return fetchJSON(url, options, false);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    window.location.href = '/auth.html';
+    throw new Error('Session expired');
   }
-
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 };
 
-// Закрыть все модальные окна
+// Модальные окна
 const closeAllModals = () => {
-  const modals = [
-    DOM.confirmModal, 
-    DOM.editModal, 
-    DOM.renameModal, 
-    DOM.infoModal
-  ];
-
-  modals.forEach(modal => {
-    if (modal) modal.style.display = 'none';
-  });
+  const modals = [DOM.confirmModal, DOM.editModal, DOM.renameModal, DOM.infoModal];
+  modals.forEach(modal => { if (modal) modal.style.display = 'none'; });
 };
 
-// Информационное модальное окно
 const showInfoModal = (title, message) => {
   DOM.infoTitle.textContent = title;
   DOM.infoMessage.textContent = message;
   DOM.infoModal.style.display = 'flex';
 };
 
-// Подтверждение
 const showConfirm = (title, message, onConfirm) => {
   DOM.confirmTitle.textContent = title;
   DOM.confirmMessage.textContent = message;
@@ -118,7 +141,6 @@ const showConfirm = (title, message, onConfirm) => {
   state.modals.confirmCallback = onConfirm;
 };
 
-// Редактирование сообщения
 const showEditModal = (messageDiv, text) => {
   state.modals.editMessageDiv = messageDiv;
   DOM.editMessageText.value = text;
@@ -126,7 +148,6 @@ const showEditModal = (messageDiv, text) => {
   DOM.editMessageText.focus();
 };
 
-// Переименование чата
 const showRenameModal = (chatId, currentTitle) => {
   state.modals.renameChatId = chatId;
   DOM.renameChatInput.value = currentTitle;
@@ -134,46 +155,31 @@ const showRenameModal = (chatId, currentTitle) => {
   DOM.renameChatInput.focus();
 };
 
-// Кнопки
+// Обработчики кнопок модалок
 if (DOM.confirmYesBtn) {
   DOM.confirmYesBtn.onclick = () => {
-    if (state.modals.confirmCallback){
-      state.modals.confirmCallback();
-    }
-
+    if (state.modals.confirmCallback) state.modals.confirmCallback();
     closeAllModals();
     state.modals.confirmCallback = null;
   };
 }
-
 if (DOM.confirmNoBtn) DOM.confirmNoBtn.onclick = closeAllModals;
 if (DOM.infoOkBtn) DOM.infoOkBtn.onclick = () => DOM.infoModal.style.display = 'none';
 if (DOM.editCancelBtn) DOM.editCancelBtn.onclick = () => DOM.editModal.style.display = 'none';
-
 if (DOM.editSaveBtn) {
   DOM.editSaveBtn.onclick = async () => {
     const newText = DOM.editMessageText.value.trim();
-
     if (!newText) return;
-
     closeAllModals();
-
     await applyEditMessage(state.modals.editMessageDiv, newText);
-
     state.modals.editMessageDiv = null;
   };
 }
-
 if (DOM.renameCancelBtn) DOM.renameCancelBtn.onclick = () => DOM.renameModal.style.display = 'none';
-
 if (DOM.renameSaveBtn) {
   DOM.renameSaveBtn.onclick = async () => {
     const newTitle = DOM.renameChatInput.value.trim();
-
-    if (newTitle && state.modals.renameChatId) {
-      await renameChatById(state.modals.renameChatId, newTitle);
-    }
-
+    if (newTitle && state.modals.renameChatId) await renameChatById(state.modals.renameChatId, newTitle);
     closeAllModals();
     state.modals.renameChatId = null;
   };
@@ -182,54 +188,62 @@ if (DOM.renameSaveBtn) {
 // Управление чатами
 const renderChatList = () => {
   DOM.chatList.innerHTML = '';
-
   state.chats.forEach(chat => {
     const li = document.createElement('li');
     li.dataset.id = chat.id;
-
     if (state.currentChatId === chat.id) li.classList.add('active');
 
     const textSpan = document.createElement('span');
     textSpan.textContent = chat.title || 'Новый чат';
     textSpan.addEventListener('click', () => openChat(chat.id));
 
-    const btnGroup = document.createElement('div');
-    btnGroup.style.display = 'flex';
-    btnGroup.style.gap = '4px';
+    const menuWrapper = document.createElement('div');
+    menuWrapper.style.position = 'relative';
+    const menuBtn = document.createElement('button');
+    menuBtn.textContent = '⋮';
+    menuBtn.className = 'icon-btn small chat-menu-btn';
+    menuBtn.title = 'Меню чата';
+    const dropdown = document.createElement('div');
+    dropdown.className = 'chat-dropdown';
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = `
+      <button class="rename-chat-item">Переименовать</button>
+      <button class="delete-chat-item">Удалить</button>
+    `;
+    menuWrapper.appendChild(menuBtn);
+    menuWrapper.appendChild(dropdown);
+    li.appendChild(textSpan);
+    li.appendChild(menuWrapper);
+    DOM.chatList.appendChild(li);
 
-    const renameBtn = document.createElement('button');
-    renameBtn.textContent = '✏️';
-    renameBtn.className = 'icon-btn small';
-    renameBtn.addEventListener('click', (e) => {
+    menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    dropdown.querySelector('.rename-chat-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = 'none';
       showRenameModal(chat.id, chat.title);
     });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '🗑️';
-    deleteBtn.className = 'icon-btn small';
-    deleteBtn.addEventListener('click', (e) => {
+    dropdown.querySelector('.delete-chat-item').addEventListener('click', (e) => {
       e.stopPropagation();
+      dropdown.style.display = 'none';
       deleteChatConfirm(chat.id);
     });
-
-    btnGroup.appendChild(renameBtn);
-    btnGroup.appendChild(deleteBtn);
-
-    li.appendChild(textSpan);
-    li.appendChild(btnGroup);
-    DOM.chatList.appendChild(li);
+  });
+  // Закрыть меню при клике вне
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
   });
 };
 
-// Загрузить список чатов с сервера
 const loadChats = async () => {
   const res = await fetchJSON('/api/chats?_=' + Date.now());
   state.chats = res;
   renderChatList();
 };
 
-// Переименовать чат
 const renameChatById = async (chatId, newTitle) => {
   try {
     const res = await fetchJSON(`/api/chats/${chatId}`, {
@@ -237,19 +251,11 @@ const renameChatById = async (chatId, newTitle) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newTitle })
     });
-
     if (res.success) {
       const chat = state.chats.find(c => c.id === chatId);
-
-      if (chat){
-        chat.title = newTitle;
-      }
-
+      if (chat) chat.title = newTitle;
       renderChatList();
-
-      if (state.currentChatId === chatId){
-        DOM.currentChatTitle.textContent = newTitle;
-      }
+      if (state.currentChatId === chatId) DOM.currentChatTitle.textContent = newTitle;
     } else {
       showInfoModal('Ошибка', 'Не удалось переименовать чат');
     }
@@ -258,47 +264,32 @@ const renameChatById = async (chatId, newTitle) => {
   }
 };
 
-// Подтверждение удаления чата
 const deleteChatConfirm = (chatId) => {
   showConfirm('Удалить чат', 'Вы уверены, что хотите удалить этот чат?', async () => {
-
     const res = await fetch(`/api/chats/${chatId}`, {
       method: 'DELETE',
-      headers: authToken ? { 
-        Authorization: `Bearer ${authToken}` 
-      } : {}
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
     });
-
     if (res.ok) {
       state.chats = state.chats.filter(c => c.id !== chatId);
-
       renderChatList();
-
       if (state.currentChatId === chatId) {
         if (state.chats.length) await openChat(state.chats[0].id);
         else await createNewChat();
       }
-
     } else {
       showInfoModal('Ошибка', 'Не удалось удалить чат');
     }
   });
 };
 
-// Создать новый чат
 const createNewChat = async () => {
   try {
-
     const newChat = await fetchJSON('/api/chats', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' 
-      },
-      body: JSON.stringify({ 
-        title: 'Новый чат' 
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Новый чат' })
     });
-
     state.chats.unshift(newChat);
     renderChatList();
     await openChat(newChat.id);
@@ -307,40 +298,28 @@ const createNewChat = async () => {
   }
 };
 
-// Открыть чат
 const openChat = async (chatId) => {
   if (state.streaming) {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
-
   state.currentChatId = chatId;
   renderChatList();
-
   try {
     const chat = await fetchJSON(`/api/chats/${chatId}`);
     DOM.currentChatTitle.textContent = chat.title;
     DOM.chatContainer.innerHTML = '';
-
     if (chat.messages?.length) {
-      for (const msg of chat.messages) {
-        await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
-      }
+      for (const msg of chat.messages) await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
     } else {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
-
     scrollToBottom();
   } catch (err) {
     console.warn(`Chat ${chatId} not found, reloading list`);
-
     await loadChats();
-
-    if (state.chats.length > 0) {
-      await openChat(state.chats[0].id);
-    } else {
-      await createNewChat();
-    }
+    if (state.chats.length > 0) await openChat(state.chats[0].id);
+    else await createNewChat();
   }
 };
 
@@ -355,39 +334,39 @@ const appendMessageToDOM = async (role, content, reasoning = null) => {
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
-
-    const formatted = typeof marked !== 'undefined'
-      ? marked.parse(content, { 
-        async: false 
-      })
-      : escapeHtml(content);
-
+    const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
     const reasoningHtml = reasoning ? `<div class="reasoning-block">${escapeHtml(reasoning)}</div>` : '';
-    assistantDiv.innerHTML = `${reasoningHtml}<div class="content-block">${formatted}</div>`;
+    assistantDiv.innerHTML = `
+      ${reasoningHtml}
+      <div class="content-block">${formatted}</div>
+      <div class="copy-response-btn" title="Копировать ответ">📋</div>
+    `;
     DOM.chatContainer.appendChild(assistantDiv);
+    const copyBtn = assistantDiv.querySelector('.copy-response-btn');
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(content).then(() => {
+        showInfoModal('Успех', 'Ответ скопирован');
+      }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать ответ'));
+    });
+    attachCopyToCodeBlocks(assistantDiv);
   }
-
   scrollToBottom();
 };
 
-// Создать временный контейнер для потокового ответа
+// Потоковые контейнеры
 const createStreamingAssistantContainer = () => {
   const assistantDiv = document.createElement('div');
   assistantDiv.className = 'message assistant';
-
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
   reasoningBlock.style.display = 'none';
-
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
-
   assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
   DOM.chatContainer.appendChild(assistantDiv);
   scrollToBottom();
-
   return { reasoningBlock, contentBlock };
 };
 
@@ -404,80 +383,50 @@ const updateContent = (text) => {
     if (!state.streamingData.contentDiv.dataset.raw) {
       state.streamingData.contentDiv.dataset.raw = '';
     }
-
     state.streamingData.contentDiv.dataset.raw += text;
-
-    const raw = state.streamingData.contentDiv.dataset.raw.replace(
-      /!\[.*?\]\(data:image\/[^)]+\)/g,
-      '[Изображение не поддерживается]'
-    );
-
-    state.streamingData.contentDiv.innerHTML = marked.parse(raw, { 
-      async: false 
-    });
-
+    const raw = state.streamingData.contentDiv.dataset.raw.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '[Изображение не поддерживается]');
+    state.streamingData.contentDiv.innerHTML = marked.parse(raw, { async: false });
+    attachCopyToCodeBlocks(state.streamingData.contentDiv);
     scrollToBottom();
   }
 };
 
-// Редактирование сообщения
 const applyEditMessage = async (messageDiv, newText) => {
   if (state.streaming) {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
-
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
   if (index === -1) return;
-
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authToken ? { 
-        Authorization: `Bearer ${authToken}` 
-      } : {})
-    },
-
-    body: JSON.stringify({ 
-      keepIndex: index - 1 
-    })
+    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+    body: JSON.stringify({ keepIndex: index - 1 })
   });
-
   if (!truncateRes.ok) {
     showInfoModal('Ошибка', 'Не удалось обновить историю');
     return;
   }
-
-  for (let i = index; i < allMessages.length; i++) {
-    allMessages[i].remove();
-  }
-
+  for (let i = index; i < allMessages.length; i++) allMessages[i].remove();
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
 };
 
-// Генерация ответа
 const generateNewResponse = async (userMessage) => {
   const { reasoningBlock, contentBlock } = createStreamingAssistantContainer();
   state.streamingData.reasoningDiv = reasoningBlock;
   state.streamingData.contentDiv = contentBlock;
-
   state.streaming = true;
   DOM.sendBtn.disabled = true;
   DOM.stopBtn.style.display = 'inline-block';
-
   const reasoningEffort = DOM.reasoningSelect.value;
   state.streamingData.abortController = new AbortController();
 
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({
         chatId: state.currentChatId,
         newMessage: userMessage,
@@ -485,28 +434,19 @@ const generateNewResponse = async (userMessage) => {
       }),
       signal: state.streamingData.abortController.signal
     });
-
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-
     while (true) {
       const { done, value } = await reader.read();
-
       if (done) break;
-
-      buffer += decoder.decode(value, { 
-        stream: true 
-      });
-
+      buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
-
             if (data.type === 'reasoning') updateReasoning(data.text);
             else if (data.type === 'content') updateContent(data.text);
             else if (data.type === 'error') updateContent(`Ошибка: ${data.message}`);
@@ -514,18 +454,12 @@ const generateNewResponse = async (userMessage) => {
         }
       }
     }
-
     await loadChats();
-
     const updatedChat = state.chats.find(c => c.id === state.currentChatId);
-
-    if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
+    if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title)
       DOM.currentChatTitle.textContent = updatedChat.title;
-    }
   } catch (err) {
-    if (err.name !== 'AbortError') {
-      updateContent(`Ошибка: ${err.message}`);
-    }
+    if (err.name !== 'AbortError') updateContent(`Ошибка: ${err.message}`);
   } finally {
     state.streaming = false;
     DOM.sendBtn.disabled = false;
@@ -537,103 +471,51 @@ const generateNewResponse = async (userMessage) => {
   }
 };
 
-// Отправить сообщение
 const sendMessage = async () => {
   const text = DOM.userInput.value.trim();
-
   if (!text || state.streaming) return;
-
   DOM.userInput.value = '';
-
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);
 };
 
-// Остановить генерацию ответа
 const stopGeneration = () => {
   if (state.streamingData.abortController) {
     state.streamingData.abortController.abort();
-    
     updateContent('(генерация остановлена)');
-
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';
   }
 };
 
-// Аватар пользователя
+// Аватар
 const loadAvatar = async () => {
   if (!DOM.userAvatar) return;
-
   try {
     const res = await fetch('/api/user/avatar', {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Cache-Control': 'no-cache',
-        Pragma: 'no-cache'
-      }
+      headers: { Authorization: `Bearer ${authToken}`, 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
     });
-
     const data = await res.json();
-
     DOM.userAvatar.src = data.url || '/default-avatar.svg';
-  } catch (err) {
-    console.warn('Avatar load error:', err);
+  } catch {
     DOM.userAvatar.src = '/default-avatar.svg';
-  }
-};
-
-const refreshToken = async () => {
-  const refresh_token = localStorage.getItem('refresh_token');
-  if (!refresh_token) return false;
-
-  try {
-    const res = await fetch('/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token })
-    });
-    const data = await res.json();
-
-    if (res.ok && data.access_token) {
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      authToken = data.access_token;
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.error('Refresh token error:', err);
-    return false;
   }
 };
 
 // Авторизация и инициализация
 const checkAuth = async () => {
   try {
-    // Попытка обновить токен при загрузке страницы, если он есть
     await refreshToken();
-
     const data = await fetchJSON('/api/auth/status');
     if (!data.authenticated) throw new Error('Not authenticated');
-
     state.currentUser = data.username;
     if (DOM.sidebarUsername) DOM.sidebarUsername.textContent = state.currentUser;
-
     await loadAvatar();
     await loadChats();
-
-    if (state.currentChatId && !state.chats.some(c => c.id === state.currentChatId)) {
-      state.currentChatId = null;
-    }
-
-    if (state.chats.length === 0) {
-      await createNewChat();
-    } else {
-      const chatToOpen = state.currentChatId || state.chats[0].id;
-      await openChat(chatToOpen);
-    }
+    if (state.currentChatId && !state.chats.some(c => c.id === state.currentChatId)) state.currentChatId = null;
+    if (state.chats.length === 0) await createNewChat();
+    else await openChat(state.currentChatId || state.chats[0].id);
   } catch (err) {
     console.error('Auth check failed:', err);
     localStorage.removeItem('auth_token');
@@ -650,26 +532,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === DOM.renameModal) DOM.renameModal.style.display = 'none';
     if (e.target === DOM.infoModal) DOM.infoModal.style.display = 'none';
   };
-
-  // Создание нового чата
   DOM.newChatBtn?.addEventListener('click', createNewChat);
-
-  // Отправка сообщения
   DOM.sendBtn?.addEventListener('click', sendMessage);
   DOM.stopBtn?.addEventListener('click', stopGeneration);
-
   DOM.userInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
-  // Выпадающее меню
+  // Меню пользователя
   if (DOM.userMenuTrigger && DOM.userDropdown) {
     DOM.userMenuTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-
       const isVisible = DOM.userDropdown.style.display === 'block';
       DOM.userDropdown.style.display = isVisible ? 'none' : 'block';
     });
@@ -680,16 +553,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Выход из системы
+  // Выход
   if (DOM.logoutBtnFromMenu) {
     DOM.logoutBtnFromMenu.addEventListener('click', async () => {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: authToken ? { 
-          Authorization: `Bearer ${authToken}` 
-        } : {}
-      });
-
+      await fetch('/api/auth/logout', { method: 'POST', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
       window.location.href = '/auth.html';
@@ -700,22 +567,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const burgerMenu = document.getElementById('burgerMenu');
   const sidebar = document.getElementById('sidebar');
   const sidebarOverlay = document.getElementById('sidebarOverlay');
-
   if (burgerMenu && sidebar && sidebarOverlay) {
     const toggleSidebar = () => {
       sidebar.classList.toggle('open');
       sidebarOverlay.classList.toggle('active');
     };
-    
     burgerMenu.addEventListener('click', toggleSidebar);
     sidebarOverlay.addEventListener('click', toggleSidebar);
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
-        toggleSidebar();
-      }
+      if (window.innerWidth > 768 && sidebar.classList.contains('open')) toggleSidebar();
     });
   }
 
-  // Запуск проверки авторизации
   checkAuth();
 });
