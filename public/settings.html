@@ -41,25 +41,10 @@
         <h3>Аватар</h3>
         <div class="avatar-row">
           <img id="settingsAvatar" class="settings-avatar" src="/default-avatar.svg" alt="Аватар">
-          <div class="info-user">
-            <button id="changeAvatarBtn" class="small-btn">Сменить</button>
-            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
-            <div class="info-row">
-              <span>Ник:</span>
-              <span id="profileUsername"></span>
-            </div>
-            <div class="info-row">
-              <span>Адрес электронной почты:</span>
-              <span id="profileEmail"></span>
-            </div>
-            <div class="info-row">
-              <span>Номер телефона:</span>
-              <span>не указан</span>
-            </div>
-          </div>
+          <button id="changeAvatarBtn" class="small-btn">Сменить</button>
+          <input type="file" id="avatarInput" accept="image/*" style="display: none;">
         </div>
       </div>
-    </div>
 
       <div class="settings-block">
         <h3>Пароль</h3>
@@ -71,6 +56,19 @@
 
       <div class="settings-block">
         <h3>Личная информация</h3>
+        <div class="info-row">
+          <span>Ник:</span>
+          <span id="profileUsername"></span>
+        </div>
+        <div class="info-row">
+          <span>Адрес электронной почты:</span>
+          <span id="profileEmail"></span>
+        </div>
+        <div class="info-row">
+          <span>Номер телефона:</span>
+          <span>не указан</span>
+        </div>
+      </div>
 
       <div class="settings-block">
         <div class="danger-row">
