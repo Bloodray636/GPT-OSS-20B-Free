@@ -176,44 +176,55 @@ app.post('/api/auth/register', async (req, res) => {
     if (error) {
       if (error.message.includes('already been registered')) {
         const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
-
         if (signError) return res.status(409).json({ error: 'User exists but wrong credentials' });
-
         return res.json({ 
           success: true, 
           token: signData.session?.access_token,
           refresh_token: signData.session?.refresh_token
         });
       }
-
       throw error;
     }
 
     const userId = data.user.id;
-    // Настройки по умолчанию
+
+    // Настройки по умолчанию (фоновая операция)
     supabase
       .from('user_settings')
-      .upsert({ 
-        user_id: userId, 
-        theme: 'dark', 
-        save_history: true 
-      }, { 
-        onConflict: 'user_id' 
-      })
-      .catch(() => null);
+      .upsert({ user_id: userId, theme: 'dark', save_history: true }, { onConflict: 'user_id' })
+      .catch(err => console.error('Failed to insert user_settings:', err));
 
-    const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+    // Создаём профиль, чтобы избежать проблем с аватарами и username
+    supabase
+      .from('profiles')
+      .upsert({ id: userId, username }, { onConflict: 'id' })
+      .catch(err => console.error('Failed to insert profile:', err));
 
-    if (signError) return res.json({ success: true });
+    // Небольшая задержка перед попыткой входа (репликация данных)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    let token = null;
+    let refreshToken = null;
+    try {
+      const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!signError && signData.session) {
+        token = signData.session.access_token;
+        refreshToken = signData.session.refresh_token;
+      } else {
+        console.error('Sign in after registration failed (non-critical):', signError);
+      }
+    } catch (signErr) {
+      console.error('Exception during sign in after registration:', signErr);
+    }
 
     return res.json({ 
       success: true, 
-      token: signData.session?.access_token,
-      refresh_token: signData.session?.refresh_token
+      token,
+      refresh_token: refreshToken
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('FATAL registration error:', err);
     res.status(500).json({ error: err.message });
   }
 });
