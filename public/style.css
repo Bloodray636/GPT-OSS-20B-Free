@@ -145,7 +145,6 @@ input:focus, textarea:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
 }
 .sidebar-header h2 {
   font-size: 1.4rem;
@@ -205,15 +204,13 @@ input:focus, textarea:focus {
   white-space: nowrap;
 }
 .chat-list li .icon-btn.small {
-  visibility: hidden;
-  font-size: 0.7rem;
+  font-size: 1.5rem;
   padding: 0.2rem 0.4rem;
 }
 .chat-list li:hover .icon-btn.small {
   visibility: visible;
 }
 .sidebar-footer {
-  border-top: 1px solid var(--border);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -238,7 +235,6 @@ input:focus, textarea:focus {
 }
 .chat-header {
   padding: 1rem 1.8rem;
-  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -360,6 +356,7 @@ input:focus, textarea:focus {
   max-height: 150px;
 }
 #sendBtn, #stopBtn {
+  padding: 14px;
   width: 48px;
   height: 48px;
   border: none;
@@ -1071,7 +1068,6 @@ body.light .auth-page {
   align-items: center;
   gap: 0.8rem;
   padding: 0.75rem;
-  border-top: 1px solid var(--border);
   background: var(--bg-secondary);
   position: relative;
 }
@@ -1111,7 +1107,8 @@ body.light .auth-page {
 }
 .user-dropdown a,
 .user-dropdown button {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   padding: 0.6rem 1rem;
   text-align: left;
@@ -1128,6 +1125,14 @@ body.light .auth-page {
 }
 .user-dropdown button {
   width: 100%;
+}
+
+.user-dropdown a svg,
+.user-dropdown button svg{
+  width: 16px;
+  height: 16px;
+  fill: #fff;
+  margin-right: 10px;
 }
 
 .settings-tabs {
