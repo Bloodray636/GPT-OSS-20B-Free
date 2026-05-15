@@ -620,7 +620,7 @@ app.post('/api/chat', authenticate, async (req, res) => {
     });
   }
 
-  const openAiMessages = chat.messages.map(msg => ({ role: msg.role, content: msg.content }));
+  const openAiMessages = chat.messages.map(msg => ({ role: msg.role, content: msg.content })); 
 
   // Настройка SSE
   res.setHeader('Content-Type', 'text/event-stream');
