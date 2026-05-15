@@ -1224,11 +1224,17 @@ body.light .auth-page {
   padding: 4px 8px;
   font-size: 0.8rem;
   cursor: pointer;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s;
   z-index: 5;
   color: var(--text-secondary);
 }
+
+.copy-response-btn svg{
+  width: 16px;
+  height: 16px;
+}
+
 .message.assistant:hover .copy-response-btn,
 pre:hover .copy-code-btn {
   opacity: 1;
