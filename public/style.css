@@ -512,6 +512,7 @@ input:focus, textarea:focus {
   border-radius: 40px;
   padding: 0.5rem 1rem;
   cursor: pointer;
+  margin-top: 20px;
 }
 .modal-content button.secondary {
   background: transparent;
@@ -1217,7 +1218,7 @@ body.light .auth-page {
 
 .copy-response-btn, .copy-code-btn {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
