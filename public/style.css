@@ -1218,10 +1218,8 @@ body.light .auth-page {
 
 .copy-response-btn, .copy-code-btn {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  bottom: -38px;
+  right: 0;
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 0.8rem;
@@ -1235,7 +1233,7 @@ body.light .auth-page {
 pre:hover .copy-code-btn {
   opacity: 1;
 }
-.copy-response-btn:hover, .copy-code-btn:hover {
+.copy-code-btn:hover {
   background: var(--accent);
   color: white;
 }
