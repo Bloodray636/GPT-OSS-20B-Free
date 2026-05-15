@@ -629,11 +629,11 @@ app.post('/api/chat', authenticate, async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-oss-20b',
+      model: 'deepseek-ai/deepseek-v4-pro',
       messages: openAiMessages,
       temperature: 1,
       top_p: 1,
-      max_tokens: 4096,
+      max_tokens: 16384,
       stream: true,
       extra_body: { chat_template_kwargs: { thinking: true, reasoning_effort } },
     });
