@@ -26,12 +26,19 @@ app.use((req, res, next) => {
   next();
 });
 
+app.set('trust proxy', 1);
+
 // Лимиты
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,   
   max: 100, 
   standardHeaders: true,
   legacyHeaders: false, 
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = forwarded ? forwarded.split(',')[0] : req.ip || 'unknown';
+    return ip;
+  },
   message: { error: 'Слишком много запросов с вашего IP. Попробуйте позже.' },
   skip: (req) => req.path === '/api/auth/refresh',
 });
@@ -42,6 +49,11 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10, 
   skipSuccessfulRequests: true, 
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = forwarded ? forwarded.split(',')[0] : req.ip || 'unknown';
+    return ip;
+  },
   message: { error: 'Слишком много попыток. Подождите 15 минут.' },
 });
 
