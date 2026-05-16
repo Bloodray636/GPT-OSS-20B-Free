@@ -5,6 +5,10 @@ import { sendMessage, stopGeneration } from './messageHandlers.js';
 import { checkAuth } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.body.classList.toggle('dark', savedTheme === 'dark');
+  document.body.classList.toggle('light', savedTheme === 'light');
+
   // Инициализация модальных окон
   initModals();
 
