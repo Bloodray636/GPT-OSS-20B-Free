@@ -153,7 +153,12 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+    headers: { 
+      'Content-Type': 'application/json', 
+      ...(authToken ? { 
+        Authorization: `Bearer ${authToken}` 
+      } : {}) 
+    },
     body: JSON.stringify({ keepIndex: index - 1 })
   });
 
@@ -168,6 +173,9 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
+
+  await loadChats();
+  await openChat(state.currentChatId);
 };
 
 export const generateNewResponse = async (userMessage) => {

@@ -278,13 +278,12 @@ input:focus, textarea:focus {
 
 .copy-user-btn {
   position: absolute;
-  bottom: -28px;
+  bottom: -30px;
   right: 0;
   opacity: 1;
   transition: opacity 0.2s;
   cursor: pointer;
   z-index: 5;
-  color: var(--text-secondary);
 }
 
 .message.assistant {
@@ -331,8 +330,8 @@ input:focus, textarea:focus {
 }
 .edit-icon {
   position: absolute;
-  bottom: -28px;
-  right: 40px;
+  bottom: -30px;
+  right: 35px;
   opacity: 1;
   transition: opacity 0.2s;
   cursor: pointer;
