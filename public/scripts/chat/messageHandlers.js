@@ -36,6 +36,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
+    userDiv.dataset.msgIndex = msgIndex;
 
     userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
@@ -61,7 +62,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null) => {
     });
 
     userDiv.querySelector('.edit-icon').addEventListener('click', () => {
-      showEditModal(userDiv, content)
+      showEditModal(userDiv, content, msgIndex)
     });
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
@@ -146,42 +147,46 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
-  const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
-  const index = allMessages.indexOf(messageDiv);
-  
-  if (index === -1) return;
+  const index = state.modals.editMessageIndex;
+  if (index === -1) {
+    showInfoModal('Ошибка', 'Не удалось определить индекс сообщения');
+    return;
+  }
 
   const res = await fetch(`/api/chats/${state.currentChatId}/messages/${index}`, {
     method: 'PUT',
-    headers: { 
-      'Content-Type': 'application/json', 
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) 
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
     },
     body: JSON.stringify({ content: newText })
   });
 
   if (!res.ok) {
-    showInfoModal('Ошибка', 'Не удалось обновить сообщение');
+    const errData = await res.json();
+    showInfoModal('Ошибка', errData.error || 'Не удалось обновить сообщение');
     return;
   }
+
+  const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
 
   for (let i = index; i < allMessages.length; i++) {
     allMessages[i].remove();
   }
 
-  await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
   await loadChats();
-
+  
   const freshChat = state.chats.find(c => c.id === state.currentChatId);
 
   if (freshChat) {
     DOM.chatContainer.innerHTML = '';
 
-    for (const msg of freshChat.messages) {
-      await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+    for (let i = 0; i < freshChat.messages.length; i++) {
+      const msg = freshChat.messages[i];
+      await appendMessageToDOM(msg.role, msg.content, msg.reasoning, i);
     }
-
+    
     scrollToBottom();
   }
 };
