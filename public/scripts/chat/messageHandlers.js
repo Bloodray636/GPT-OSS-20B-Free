@@ -32,7 +32,7 @@ const attachCopyToCodeBlocks = (container) => {
   });
 };
 
-export const appendMessageToDOM = async (role, content, reasoning = null) => {
+export const appendMessageToDOM = async (role, content, reasoning = null, msgIndex = -1) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
@@ -186,7 +186,7 @@ export const applyEditMessage = async (messageDiv, newText) => {
       const msg = freshChat.messages[i];
       await appendMessageToDOM(msg.role, msg.content, msg.reasoning, i);
     }
-    
+
     scrollToBottom();
   }
 };
