@@ -1092,6 +1092,7 @@ body.light .auth-page {
   color: var(--accent);
 }
 .user-dropdown {
+  padding: 4px;
   position: absolute;
   bottom: 100%;
   right: 0;
@@ -1105,6 +1106,7 @@ body.light .auth-page {
 }
 .user-dropdown a,
 .user-dropdown button {
+  border-radius: 8px;
   display: flex;
   align-items: center;
   width: 100%;
@@ -1280,7 +1282,9 @@ pre {
   box-shadow: var(--shadow-sm);
 }
 .chat-dropdown button {
-  display: block;
+  display: flex;
+  align-items: center;
+
   width: 100%;
   text-align: left;
   padding: 0.4rem 0.8rem;
@@ -1300,13 +1304,13 @@ pre {
 .chat-dropdown .rename-chat-item svg{
   width: 16px;
   height: 16px;
-  margin-right: 12px;
+  margin-right: 6px;
   fill: #fff;
 }
 
 .chat-dropdown .delete-chat-item svg {
   width: 16px;
   height: 16px;
-  margin-right: 12px;
+  margin-right: 6px;
   fill: var(--danger);
 }
