@@ -254,7 +254,7 @@ input:focus, textarea:focus {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 2.3rem;
 }
 
 .message {
@@ -270,6 +270,10 @@ input:focus, textarea:focus {
 }
 .message.user {
   position: relative;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+  display: flex;
 }
 
 .copy-user-btn {
@@ -1271,6 +1275,7 @@ body.light .auth-page {
 
 .message.assistant {
   position: relative;
+  align-items: flex-start;
 }
 pre {
   position: relative;
