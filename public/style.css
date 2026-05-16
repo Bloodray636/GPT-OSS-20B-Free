@@ -307,7 +307,7 @@ input:focus, textarea:focus {
   white-space: pre-wrap;
 }
 .reasoning-block::before {
-  content: "🧠 Reasoning";
+  content: "Рассуждения";
   font-weight: 600;
   display: block;
   margin-bottom: 0.3rem;
@@ -1228,12 +1228,12 @@ body.light .auth-page {
 }
 
 .copy-code-btn {
-  width: 100px;
+  width: 90px;
   height: 30px;
   position: absolute;
   text-align: center;
-  top: 0;
-  right: 0;
+  top: 10px;
+  right: 10px;
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 0.8rem;
@@ -1267,6 +1267,8 @@ pre {
   padding: 0 0.2rem;
 }
 .chat-dropdown {
+  border-radius: 8px;
+  padding: 4px;
   position: absolute;
   right: 0;
   top: 100%;
@@ -1291,3 +1293,20 @@ pre {
   background: var(--bg-hover);
 }
 
+.chat-dropdown .delete-chat-item{
+  color: var(--danger);
+}
+
+.chat-dropdown .rename-chat-item svg{
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
+  fill: #fff;
+}
+
+.chat-dropdown .delete-chat-item svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
+  fill: var(--danger);
+}
