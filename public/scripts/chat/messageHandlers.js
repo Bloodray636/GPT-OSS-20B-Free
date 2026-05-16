@@ -150,9 +150,10 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
+  // Находим все сообщения в контейнере
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
-
+  
   if (index === -1) return;
 
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
@@ -175,21 +176,9 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
-  await new Promise(resolve => setTimeout(resolve, 200));
   await loadChats();
 
-  const freshChat = state.chats.find(c => c.id === state.currentChatId);
-
-  if (freshChat) {
-    DOM.chatContainer.innerHTML = '';
-
-    for (let i = 0; i < freshChat.messages.length; i++) {
-      const msg = freshChat.messages[i];
-      await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
-    }
-
-    scrollToBottom();
-  }
+  if (state.modals) state.modals.editMessageIndex = -1;
 };
 
 export const generateNewResponse = async (userMessage) => {
