@@ -131,6 +131,49 @@ router.put('/:chatId/truncate', authenticate, async (req, res) => {
   }
 });
 
+router.put('/:chatId/messages/:messageIndex', authenticate, async (req, res) => {
+  const { chatId, messageIndex } = req.params;
+  const { content } = req.body;
+
+  if (!content) return res.status(400).json({ 
+    error: 'content required' 
+  });
+
+  try {
+    const chat = await getChatById(chatId, req.user.id);
+
+    if (!chat) return res.status(404).json({ 
+      error: 'Chat not found' 
+    });
+
+    const idx = parseInt(messageIndex, 10);
+
+    if (isNaN(idx) || idx < 0 || idx >= chat.messages.length) {
+      return res.status(400).json({ 
+        error: 'Invalid message index' 
+      });
+    }
+
+    if (chat.messages[idx].role !== 'user') {
+      return res.status(400).json({ 
+        error: 'Not a user message' 
+      });
+    }
+
+    chat.messages[idx].content = content;
+
+    chat.messages = chat.messages.slice(0, idx + 1);
+
+    await saveChat(chat, req.user.id);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ 
+      error: err.message 
+    });
+  }
+});
+
 router.get('/:chatId', authenticate, async (req, res) => {
   setNoCacheHeaders(res);
 

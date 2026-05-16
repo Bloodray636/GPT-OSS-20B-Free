@@ -151,14 +151,17 @@ export const applyEditMessage = async (messageDiv, newText) => {
   
   if (index === -1) return;
 
-  const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
+  const res = await fetch(`/api/chats/${state.currentChatId}/messages/${index}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
-    body: JSON.stringify({ keepIndex: index - 1 })
+    headers: { 
+      'Content-Type': 'application/json', 
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) 
+    },
+    body: JSON.stringify({ content: newText })
   });
 
-  if (!truncateRes.ok) {
-    showInfoModal('Ошибка', 'Не удалось обновить историю');
+  if (!res.ok) {
+    showInfoModal('Ошибка', 'Не удалось обновить сообщение');
     return;
   }
 
@@ -166,24 +169,21 @@ export const applyEditMessage = async (messageDiv, newText) => {
     allMessages[i].remove();
   }
 
+  await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
-
   await loadChats();
 
-  const freshChat = await fetchJSON(`/api/chats/${state.currentChatId}?_=${Date.now()}`);
+  const freshChat = state.chats.find(c => c.id === state.currentChatId);
 
-  DOM.chatContainer.innerHTML = '';
-  if (freshChat.messages?.length) {
+  if (freshChat) {
+    DOM.chatContainer.innerHTML = '';
+
     for (const msg of freshChat.messages) {
       await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
     }
-  } else {
-    await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
-  }
-  scrollToBottom();
 
-  const chatIndex = state.chats.findIndex(c => c.id === state.currentChatId);
-  if (chatIndex !== -1) state.chats[chatIndex] = freshChat;
+    scrollToBottom();
+  }
 };
 
 export const generateNewResponse = async (userMessage) => {
