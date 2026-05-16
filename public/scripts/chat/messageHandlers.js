@@ -36,24 +36,33 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
-    userDiv.setAttribute('data-index', msgIndex);
+    if (msgIndex !== -1) userDiv.setAttribute('data-index', msgIndex);
 
-    userDiv.innerHTML = `
+    // Базовая часть без кнопки редактирования
+    let innerHtml = `
       <div class="bubble">${escapeHtml(content)}</div>
       <div class="copy-user-btn" title="Копировать">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
           <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
         </svg>
       </div>
-      <span class="edit-icon" title="Редактировать">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-          <path fill="currentColor" d="m21.71 4.72l-2.43-2.43a1 1 0 0 0-1.41 0l-5.58 5.58a1 1 0 0 0-.29.71V11a1 1 0 0 0 1 1h2.42a1 1 0 0 0 .71-.29l5.58-5.58a1 1 0 0 0 0-1.41M15 10h-1V9l4.58-4.58l1 1Zm4 2a1 1 0 0 0-1 1a7 7 0 0 1-7 7H5.41l.64-.63a1 1 0 0 0 0-1.42A7 7 0 0 1 11 6a1 1 0 0 0 0-2a9 9 0 0 0-7 14.62l-1.71 1.67a1 1 0 0 0-.21 1.09A1 1 0 0 0 3 22h8a9 9 0 0 0 9-9a1 1 0 0 0-1-1"/>
-        </svg>
-      </span>
     `;
 
+    // Добавляем кнопку редактирования только если индекс действительный
+    if (msgIndex !== -1) {
+      innerHtml += `
+        <span class="edit-icon" title="Редактировать">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="currentColor" d="m21.71 4.72l-2.43-2.43a1 1 0 0 0-1.41 0l-5.58 5.58a1 1 0 0 0-.29.71V11a1 1 0 0 0 1 1h2.42a1 1 0 0 0 .71-.29l5.58-5.58a1 1 0 0 0 0-1.41M15 10h-1V9l4.58-4.58l1 1Zm4 2a1 1 0 0 0-1 1a7 7 0 0 1-7 7H5.41l.64-.63a1 1 0 0 0 0-1.42A7 7 0 0 1 11 6a1 1 0 0 0 0-2a9 9 0 0 0-7 14.62l-1.71 1.67a1 1 0 0 0-.21 1.09A1 1 0 0 0 3 22h8a9 9 0 0 0 9-9a1 1 0 0 0-1-1"/>
+          </svg>
+        </span>
+      `;
+    }
+
+    userDiv.innerHTML = innerHtml;
     DOM.chatContainer.appendChild(userDiv);
 
+    // Обработчик копирования
     const copyBtn = userDiv.querySelector('.copy-user-btn');
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(content).then(() => {
@@ -61,11 +70,15 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
       }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать сообщение'));
     });
 
-    userDiv.querySelector('.edit-icon').addEventListener('click', () => {
-      const idx = parseInt(userDiv.getAttribute('data-index'), 10);
-      showEditModal(userDiv, content); 
-      state.modals.editMessageIndex = idx;
-    });
+    // Обработчик редактирования – только если кнопка существует
+    const editIcon = userDiv.querySelector('.edit-icon');
+    if (editIcon) {
+      editIcon.addEventListener('click', () => {
+        const idx = parseInt(userDiv.getAttribute('data-index'), 10);
+        state.modals.editMessageIndex = idx;
+        showEditModal(userDiv, content);
+      });
+    }
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
@@ -86,7 +99,6 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     DOM.chatContainer.appendChild(assistantDiv);
 
     const copyBtn = assistantDiv.querySelector('.copy-response-btn');
-
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(content).then(() => {
         showInfoModal('Успех', 'Ответ скопирован');
@@ -176,7 +188,7 @@ export const applyEditMessage = async (messageDiv, newText) => {
     allMessages[i].remove();
   }
 
-  // Генерируем новый ответ
+  // Генерируем новый ответ (сервер сохранит новое сообщение пользователя)
   await generateNewResponse(newText);
 
   // Обновляем список чатов и перерисовываем
@@ -190,6 +202,9 @@ export const applyEditMessage = async (messageDiv, newText) => {
     }
     scrollToBottom();
   }
+
+  // Сбрасываем индекс редактирования
+  state.modals.editMessageIndex = -1;
 };
 
 export const generateNewResponse = async (userMessage) => {
