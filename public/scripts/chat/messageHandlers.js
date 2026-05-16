@@ -155,9 +155,7 @@ export const applyEditMessage = async (messageDiv, newText) => {
     method: 'PUT',
     headers: { 
       'Content-Type': 'application/json', 
-      ...(authToken ? { 
-        Authorization: `Bearer ${authToken}` 
-      } : {}) 
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) 
     },
     body: JSON.stringify({ keepIndex: index - 1 })
   });
@@ -167,13 +165,31 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
-  for (let i = index; i < allMessages.length; i++) allMessages[i].remove();
+  for (let i = index; i < allMessages.length; i++) {
+    allMessages[i].remove();
+  }
 
-  await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
 
-  showInfoModal('Успех', 'Сообщение изменено. Страница будет перезагружена.');
-  setTimeout(() => location.reload(), 1000);
+  const freshChat = await fetchJSON(`/api/chats/${state.currentChatId}`);
+
+  const chatIndex = state.chats.findIndex(c => c.id === state.currentChatId);
+
+  if (chatIndex !== -1){
+    state.chats[chatIndex] = freshChat;
+  }
+
+  DOM.chatContainer.innerHTML = '';
+
+  if (freshChat.messages?.length) {
+    for (const msg of freshChat.messages) {
+      await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+    }
+  } else {
+    await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
+  }
+  
+  scrollToBottom();
 };
 
 export const generateNewResponse = async (userMessage) => {
