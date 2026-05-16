@@ -173,12 +173,6 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   const freshChat = await fetchJSON(`/api/chats/${state.currentChatId}`);
 
-  const chatIndex = state.chats.findIndex(c => c.id === state.currentChatId);
-
-  if (chatIndex !== -1){
-    state.chats[chatIndex] = freshChat;
-  }
-
   DOM.chatContainer.innerHTML = '';
 
   if (freshChat.messages?.length) {
@@ -188,8 +182,11 @@ export const applyEditMessage = async (messageDiv, newText) => {
   } else {
     await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
   }
-  
+
   scrollToBottom();
+
+  const chatIndex = state.chats.findIndex(c => c.id === state.currentChatId);
+  if (chatIndex !== -1) state.chats[chatIndex] = freshChat;
 };
 
 export const generateNewResponse = async (userMessage) => {
