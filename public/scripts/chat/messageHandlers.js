@@ -6,19 +6,27 @@ import { loadChats } from './chatManagement.js';
 // Вспомогательная для копирования кода (использует showInfoModal)
 const attachCopyToCodeBlocks = (container) => {
   if (!container) return;
+
   container.querySelectorAll('pre').forEach(pre => {
-    if (pre.querySelector('.copy-code-btn')) return;
+    if (pre.querySelector('.copy-code-btn')){
+      return;
+    }
+
     const copyBtn = document.createElement('div');
     copyBtn.className = 'copy-code-btn';
     copyBtn.innerHTML = 'Копировать';
     copyBtn.title = 'Копировать код';
+
     copyBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+
       const code = pre.querySelector('code')?.innerText || pre.innerText;
+
       navigator.clipboard.writeText(code).then(() => {
         showInfoModal('Успех', 'Код скопирован');
       }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать код'));
     });
+
     pre.style.position = 'relative';
     pre.appendChild(copyBtn);
   });
@@ -28,6 +36,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null) => {
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
+
     userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
       <span class="edit-icon" title="Редактировать">
@@ -36,13 +45,16 @@ export const appendMessageToDOM = async (role, content, reasoning = null) => {
         </svg>
       </span>
     `;
+
     DOM.chatContainer.appendChild(userDiv);
     userDiv.querySelector('.edit-icon').addEventListener('click', () => showEditModal(userDiv, content));
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
+
     const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
     const reasoningHtml = reasoning ? `<div class="reasoning-block">${escapeHtml(reasoning)}</div>` : '';
+
     assistantDiv.innerHTML = `
       ${reasoningHtml}
       <div class="content-block">${formatted}</div>
@@ -52,31 +64,40 @@ export const appendMessageToDOM = async (role, content, reasoning = null) => {
         </svg>
       </div>
     `;
+
     DOM.chatContainer.appendChild(assistantDiv);
+
     const copyBtn = assistantDiv.querySelector('.copy-response-btn');
+
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(content).then(() => {
         showInfoModal('Успех', 'Ответ скопирован');
       }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать ответ'));
     });
+
     attachCopyToCodeBlocks(assistantDiv);
   }
+
   scrollToBottom();
 };
 
 export const createStreamingAssistantContainer = () => {
   const assistantDiv = document.createElement('div');
   assistantDiv.className = 'message assistant';
+
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
   reasoningBlock.style.display = 'none';
+
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
   assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
   DOM.chatContainer.appendChild(assistantDiv);
+
   scrollToBottom();
+
   return { reasoningBlock, contentBlock };
 };
 
@@ -90,11 +111,16 @@ export const updateReasoning = (text) => {
 
 export const updateContent = (text) => {
   if (state.streamingData.contentDiv) {
-    if (!state.streamingData.contentDiv.dataset.raw) state.streamingData.contentDiv.dataset.raw = '';
+    if (!state.streamingData.contentDiv.dataset.raw){
+      state.streamingData.contentDiv.dataset.raw = '';
+    }
+
     state.streamingData.contentDiv.dataset.raw += text;
+    
     const raw = state.streamingData.contentDiv.dataset.raw.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '[Изображение не поддерживается]');
     state.streamingData.contentDiv.innerHTML = marked.parse(raw, { async: false });
     attachCopyToCodeBlocks(state.streamingData.contentDiv);
+
     scrollToBottom();
   }
 };
@@ -104,19 +130,27 @@ export const applyEditMessage = async (messageDiv, newText) => {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
+
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
+
   if (index === -1) return;
+
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
     body: JSON.stringify({ keepIndex: index - 1 })
   });
+
   if (!truncateRes.ok) {
     showInfoModal('Ошибка', 'Не удалось обновить историю');
     return;
   }
-  for (let i = index; i < allMessages.length; i++) allMessages[i].remove();
+
+  for (let i = index; i < allMessages.length; i++){
+    allMessages[i].remove();
+  }
+
   await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
 };
@@ -128,6 +162,7 @@ export const generateNewResponse = async (userMessage) => {
   state.streaming = true;
   DOM.sendBtn.disabled = true;
   DOM.stopBtn.style.display = 'inline-block';
+
   const reasoningEffort = DOM.reasoningSelect.value;
   state.streamingData.abortController = new AbortController();
 
@@ -142,33 +177,48 @@ export const generateNewResponse = async (userMessage) => {
       }),
       signal: state.streamingData.abortController.signal
     });
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
     while (true) {
       const { done, value } = await reader.read();
+
       if (done) break;
+
       buffer += decoder.decode(value, { stream: true });
+
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === 'reasoning') updateReasoning(data.text);
-            else if (data.type === 'content') updateContent(data.text);
-            else if (data.type === 'error') updateContent(`Ошибка: ${data.message}`);
+            if (data.type === 'reasoning'){
+              updateReasoning(data.text);
+            } else if (data.type === 'content') {
+              updateContent(data.text);
+            } else if (data.type === 'error') {
+              updateContent(`Ошибка: ${data.message}`);
+            }
           } catch (e) {}
         }
       }
     }
+
     await loadChats();
+
     const updatedChat = state.chats.find(c => c.id === state.currentChatId);
+
     if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
       DOM.currentChatTitle.textContent = updatedChat.title;
     }
   } catch (err) {
-    if (err.name !== 'AbortError') updateContent(`Ошибка: ${err.message}`);
+    if (err.name !== 'AbortError'){
+      updateContent(`Ошибка: ${err.message}`);
+    }
   } finally {
     state.streaming = false;
     DOM.sendBtn.disabled = false;
@@ -182,8 +232,11 @@ export const generateNewResponse = async (userMessage) => {
 
 export const sendMessage = async () => {
   const text = DOM.userInput.value.trim();
+
   if (!text || state.streaming) return;
+
   DOM.userInput.value = '';
+
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);
 };
@@ -191,7 +244,9 @@ export const sendMessage = async () => {
 export const stopGeneration = () => {
   if (state.streamingData.abortController) {
     state.streamingData.abortController.abort();
+
     updateContent('(генерация остановлена)');
+    
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';

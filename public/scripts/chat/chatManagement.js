@@ -5,10 +5,14 @@ import { appendMessageToDOM } from './messageHandlers.js';
 
 export const renderChatList = () => {
   DOM.chatList.innerHTML = '';
+
   state.chats.forEach(chat => {
     const li = document.createElement('li');
     li.dataset.id = chat.id;
-    if (state.currentChatId === chat.id) li.classList.add('active');
+
+    if (state.currentChatId === chat.id){
+      li.classList.add('active');
+    }
 
     const textSpan = document.createElement('span');
     textSpan.textContent = chat.title || 'Новый чат';
@@ -16,13 +20,16 @@ export const renderChatList = () => {
 
     const menuWrapper = document.createElement('div');
     menuWrapper.style.position = 'relative';
+
     const menuBtn = document.createElement('button');
     menuBtn.textContent = '⋮';
     menuBtn.className = 'icon-btn small chat-menu-btn';
     menuBtn.title = 'Меню чата';
+
     const dropdown = document.createElement('div');
     dropdown.className = 'chat-dropdown';
     dropdown.style.display = 'none';
+
     dropdown.innerHTML = `
       <button class="rename-chat-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -46,20 +53,27 @@ export const renderChatList = () => {
 
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+
       document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
       dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
     });
+
     dropdown.querySelector('.rename-chat-item').addEventListener('click', (e) => {
       e.stopPropagation();
+
       dropdown.style.display = 'none';
       showRenameModal(chat.id, chat.title);
     });
+
     dropdown.querySelector('.delete-chat-item').addEventListener('click', (e) => {
       e.stopPropagation();
+
       dropdown.style.display = 'none';
       deleteChatConfirm(chat.id);
     });
+
   });
+
   document.addEventListener('click', () => {
     document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
   });
@@ -78,11 +92,20 @@ export const renameChatById = async (chatId, newTitle) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newTitle })
     });
+
     if (res.success) {
       const chat = state.chats.find(c => c.id === chatId);
-      if (chat) chat.title = newTitle;
+
+      if (chat){
+        chat.title = newTitle;
+      }
+
       renderChatList();
-      if (state.currentChatId === chatId) DOM.currentChatTitle.textContent = newTitle;
+
+      if (state.currentChatId === chatId){
+        DOM.currentChatTitle.textContent = newTitle;
+      }
+
     } else {
       showInfoModal('Ошибка', 'Не удалось переименовать чат');
     }
@@ -97,13 +120,20 @@ export const deleteChatConfirm = (chatId) => {
       method: 'DELETE',
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
     });
+
     if (res.ok) {
       state.chats = state.chats.filter(c => c.id !== chatId);
+
       renderChatList();
+
       if (state.currentChatId === chatId) {
-        if (state.chats.length) await openChat(state.chats[0].id);
-        else await createNewChat();
+        if (state.chats.length){
+          await openChat(state.chats[0].id);
+        } else {
+          await createNewChat();
+        }
       }
+
     } else {
       showInfoModal('Ошибка', 'Не удалось удалить чат');
     }
@@ -117,8 +147,11 @@ export const createNewChat = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'Новый чат' })
     });
+
     state.chats.unshift(newChat);
+
     renderChatList();
+
     await openChat(newChat.id);
   } catch {
     showInfoModal('Ошибка', 'Не удалось создать чат');
@@ -130,22 +163,33 @@ export const openChat = async (chatId) => {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
     return;
   }
+
   state.currentChatId = chatId;
+
   renderChatList();
+
   try {
     const chat = await fetchJSON(`/api/chats/${chatId}`);
     DOM.currentChatTitle.textContent = chat.title;
     DOM.chatContainer.innerHTML = '';
+
     if (chat.messages?.length) {
-      for (const msg of chat.messages) await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+      for (const msg of chat.messages){
+        await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
+      }
     } else {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
+
     scrollToBottom();
+
   } catch (err) {
-    console.warn(`Chat ${chatId} not found, reloading list`);
     await loadChats();
-    if (state.chats.length > 0) await openChat(state.chats[0].id);
-    else await createNewChat();
+    
+    if (state.chats.length > 0){
+      await openChat(state.chats[0].id);
+    } else {
+      await createNewChat();
+    }
   }
 };

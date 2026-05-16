@@ -5,16 +5,19 @@ export const state = {
   currentChatId: null,
   chats: [],
   streaming: false,
+
   streamingData: {
     reasoningDiv: null,
     contentDiv: null,
     abortController: null
   },
+
   modals: {
     editMessageDiv: null,
     renameChatId: null,
     confirmCallback: null
   }
+  
 };
 
 export const DOM = {

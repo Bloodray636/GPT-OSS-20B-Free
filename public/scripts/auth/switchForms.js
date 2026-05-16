@@ -1,7 +1,14 @@
 import { elements } from './domElements.js';
 
 export function initSwitchForms() {
-  const { loginFormDiv, registerFormDiv, showRegisterLink, showLoginLink, loginError, registerError } = elements;
+  const { 
+    loginFormDiv, 
+    registerFormDiv, 
+    showRegisterLink, 
+    showLoginLink, 
+    loginError, 
+    registerError 
+  } = elements;
 
   showRegisterLink.addEventListener('click', (e) => {
     e.preventDefault();
