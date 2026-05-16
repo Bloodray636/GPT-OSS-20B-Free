@@ -14,7 +14,6 @@ export const state = {
 
   modals: {
     editMessageDiv: null,
-    editMessageIndex: -1,
     renameChatId: null,
     confirmCallback: null
   }

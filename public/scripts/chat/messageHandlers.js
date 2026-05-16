@@ -36,7 +36,6 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
-    userDiv.setAttribute('data-index', msgIndex);
 
     userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
@@ -67,8 +66,6 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     const editIcon = userDiv.querySelector('.edit-icon');
 
     editIcon.addEventListener('click', () => {
-      const idx = parseInt(userDiv.getAttribute('data-index'), 10);
-      state.modals.editMessageIndex = idx;
       showEditModal(userDiv, content);
     });
   } else if (role === 'assistant') {
@@ -153,44 +150,46 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
-  const index = state.modals.editMessageIndex;
+  const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
+  const index = allMessages.indexOf(messageDiv);
 
-  if (index === -1) {
-    showInfoModal('Ошибка', 'Не удалось определить индекс сообщения');
-    return;
-  }
+  if (index === -1) return;
 
-  const res = await fetch(`/api/chats/${state.currentChatId}/messages/${index}`, {
+  const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+    headers: { 
+      'Content-Type': 'application/json', 
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) 
     },
-    body: JSON.stringify({ content: newText })
+    body: JSON.stringify({ keepIndex: index - 1 })
   });
 
-  if (!res.ok) {
-    const errData = await res.json();
-    showInfoModal('Ошибка', errData.error || 'Не удалось обновить сообщение');
+  if (!truncateRes.ok) {
+    showInfoModal('Ошибка', 'Не удалось обновить историю');
     return;
   }
-
-  // Удаляем из DOM все сообщения от редактируемого и далее
-  const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
 
   for (let i = index; i < allMessages.length; i++) {
     allMessages[i].remove();
   }
 
+  await appendMessageToDOM('user', newText);
   await generateNewResponse(newText);
+  await new Promise(resolve => setTimeout(resolve, 200));
+  await loadChats();
 
-  setTimeout(() => {
-    const userMessages = Array.from(DOM.chatContainer.querySelectorAll('.message.user'));
-    // Оставляем только последнее сообщение пользователя (новое), остальные скрываем
-    for (let i = 0; i < userMessages.length - 1; i++) {
-      userMessages[i].style.display = 'none';
+  const freshChat = state.chats.find(c => c.id === state.currentChatId);
+
+  if (freshChat) {
+    DOM.chatContainer.innerHTML = '';
+
+    for (let i = 0; i < freshChat.messages.length; i++) {
+      const msg = freshChat.messages[i];
+      await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
     }
-  }, 100);
+
+    scrollToBottom();
+  }
 };
 
 export const generateNewResponse = async (userMessage) => {

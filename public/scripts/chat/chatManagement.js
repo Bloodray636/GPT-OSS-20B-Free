@@ -174,9 +174,8 @@ export const openChat = async (chatId) => {
     DOM.chatContainer.innerHTML = '';
 
     if (chat.messages?.length) {
-      for (let i = 0; i < chat.messages.length; i++) {
-        const msg = chat.messages[i];
-        await appendMessageToDOM(msg.role, msg.content, msg.reasoning, i);
+      for (const msg of chat.messages) {
+        await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
       }
     } else {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
@@ -192,7 +191,7 @@ export const openChat = async (chatId) => {
       if (!bubble) continue;
 
       const text = bubble.innerText;
-      
+
       if (seenBubbles.has(text)) {
         userMessages[i].style.display = 'none';
       } else {
