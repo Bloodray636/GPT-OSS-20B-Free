@@ -167,6 +167,21 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+    body: JSON.stringify({
+      chatId: state.currentChatId,
+      newMessage: newText,
+      reasoning_effort: DOM.reasoningSelect.value
+    })
+  });
+
+  if (!res.ok) {
+    showInfoModal('Ошибка', 'Не удалось отправить сообщение');
+    return;
+  }
+
   showInfoModal('Успех', 'Сообщение изменено. Страница будет перезагружена.');
   setTimeout(() => location.reload(), 1000);
 };
