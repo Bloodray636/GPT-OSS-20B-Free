@@ -24,9 +24,8 @@ export const showConfirm = (title, message, onConfirm) => {
   state.modals.confirmCallback = onConfirm;
 };
 
-export const showEditModal = (messageDiv, text, msgIndex) => { 
+export const showEditModal = (messageDiv, text) => { 
   state.modals.editMessageDiv = messageDiv;
-  state.modals.editMessageIndex = msgIndex;
   DOM.editMessageText.value = text;
   DOM.editModal.style.display = 'flex';
   DOM.editMessageText.focus();

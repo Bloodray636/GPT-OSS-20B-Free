@@ -36,7 +36,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
-    userDiv.dataset.msgIndex = msgIndex;
+    userDiv.setAttribute('data-index', msgIndex);
 
     userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
@@ -62,7 +62,9 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     });
 
     userDiv.querySelector('.edit-icon').addEventListener('click', () => {
-      showEditModal(userDiv, content, msgIndex)
+      const idx = parseInt(userDiv.getAttribute('data-index'), 10);
+      showEditModal(userDiv, content); 
+      state.modals.editMessageIndex = idx;
     });
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
@@ -168,25 +170,24 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
+  // Удаляем из DOM все сообщения от редактируемого и далее
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
-
   for (let i = index; i < allMessages.length; i++) {
     allMessages[i].remove();
   }
 
+  // Генерируем новый ответ
   await generateNewResponse(newText);
-  await loadChats();
-  
-  const freshChat = state.chats.find(c => c.id === state.currentChatId);
 
+  // Обновляем список чатов и перерисовываем
+  await loadChats();
+  const freshChat = state.chats.find(c => c.id === state.currentChatId);
   if (freshChat) {
     DOM.chatContainer.innerHTML = '';
-
     for (let i = 0; i < freshChat.messages.length; i++) {
       const msg = freshChat.messages[i];
       await appendMessageToDOM(msg.role, msg.content, msg.reasoning, i);
     }
-
     scrollToBottom();
   }
 };
