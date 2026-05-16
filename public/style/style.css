@@ -258,9 +258,10 @@ input:focus, textarea:focus {
 }
 
 .message {
-  display: flex;
   flex-direction: column;
-  max-width: 85%;
+  align-items: flex-end;
+  width: 100%;
+  display: flex;
   animation: fadeInUp 0.2s ease;
 }
 @keyframes fadeInUp {
