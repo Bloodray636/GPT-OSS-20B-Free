@@ -268,8 +268,20 @@ input:focus, textarea:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 .message.user {
-  align-self: flex-end;
+  position: relative;
 }
+
+.copy-user-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 1;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  z-index: 5;
+  color: var(--text-secondary);
+}
+
 .message.assistant {
   align-self: flex-start;
 }
@@ -313,16 +325,18 @@ input:focus, textarea:focus {
   margin-bottom: 0.3rem;
 }
 .edit-icon {
-  align-self: flex-end;
-  margin-top: 5px;
-  font-size: 0.75rem;
+  position: absolute;
+  top: 8px;
+  right: 40px;
   opacity: 1;
-  transition: 0.2s;
-  padding: 3px 8px;
-  border-radius: 40px;
+  transition: opacity 0.2s;
   cursor: pointer;
+  z-index: 5;
+  background: transparent;
+  padding: 0;
+  margin: 0;
 }
-
+.copy-user-btn svg,
 .edit-icon svg{
   width: 16px;
   height: 16px;
