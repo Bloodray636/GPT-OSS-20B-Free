@@ -167,6 +167,12 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
+  if (!DOM.chatContainer) {
+    console.error('DOM.chatContainer is null');
+    showInfoModal('Ошибка', 'Контейнер чата не найден');
+    return;
+  }
+
   const res = await fetch(`/api/chats/${state.currentChatId}/messages/${index}`, {
     method: 'PUT',
     headers: {
@@ -184,6 +190,14 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   // Удаляем из DOM все сообщения от редактируемого и далее
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
+
+  if (!allMessages.length && allMessages.length !== 0) {
+    // если не массив, то allMessages – не массив
+    console.error('allMessages is not an array', allMessages);
+    showInfoModal('Ошибка', 'Ошибка получения сообщений');
+    return;
+  }
+
   for (let i = index; i < allMessages.length; i++) {
     allMessages[i].remove();
   }
