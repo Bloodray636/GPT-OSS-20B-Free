@@ -5,7 +5,16 @@ import { supabase } from '../config.js';
 
 const router = express.Router();
 
+const setNoCacheHeaders = (res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+};
+
+
 router.get('/', authenticate, async (req, res) => {
+  setNoCacheHeaders(res);
+
   try {
     const chats = await getChats(req.user.id);
 
@@ -123,11 +132,8 @@ router.put('/:chatId/truncate', authenticate, async (req, res) => {
 });
 
 router.get('/:chatId', authenticate, async (req, res) => {
-  res.setHeader(
-    'Cache-Control', 
-    'no-store, no-cache, must-revalidate, private'
-  );
-  
+  setNoCacheHeaders(res);
+
   try {
     const chat = await getChatById(
       req.params.chatId, 

@@ -148,6 +148,7 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
   const index = allMessages.indexOf(messageDiv);
+  
   if (index === -1) return;
 
   const truncateRes = await fetch(`/api/chats/${state.currentChatId}/truncate`, {
@@ -167,10 +168,11 @@ export const applyEditMessage = async (messageDiv, newText) => {
 
   await generateNewResponse(newText);
 
+  await loadChats();
+
   const freshChat = await fetchJSON(`/api/chats/${state.currentChatId}?_=${Date.now()}`);
 
   DOM.chatContainer.innerHTML = '';
-
   if (freshChat.messages?.length) {
     for (const msg of freshChat.messages) {
       await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
@@ -178,11 +180,9 @@ export const applyEditMessage = async (messageDiv, newText) => {
   } else {
     await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
   }
-
   scrollToBottom();
 
   const chatIndex = state.chats.findIndex(c => c.id === state.currentChatId);
-  
   if (chatIndex !== -1) state.chats[chatIndex] = freshChat;
 };
 

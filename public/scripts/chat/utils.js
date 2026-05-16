@@ -83,6 +83,8 @@ export const fetchJSON = async (url, options = {}, retry = true) => {
     headers.Authorization = `Bearer ${authToken}`;
   }
 
+  headers['Cache-Control'] = 'no-cache';
+
   const res = await fetch(url, { 
     ...options, headers 
   });
