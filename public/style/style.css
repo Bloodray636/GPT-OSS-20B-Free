@@ -274,8 +274,8 @@ input:focus, textarea:focus {
 
 .copy-user-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  bottom: -28px;
+  right: 0;
   opacity: 1;
   transition: opacity 0.2s;
   cursor: pointer;
@@ -327,7 +327,7 @@ input:focus, textarea:focus {
 }
 .edit-icon {
   position: absolute;
-  top: 8px;
+  bottom: -28px;
   right: 40px;
   opacity: 1;
   transition: opacity 0.2s;
@@ -715,7 +715,7 @@ input:focus, textarea:focus {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
-    gap: 1rem;
+    gap: 2.3rem;
     padding-bottom: 0.8rem;
   }
   .input-area {
