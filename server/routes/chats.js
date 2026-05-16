@@ -123,6 +123,11 @@ router.put('/:chatId/truncate', authenticate, async (req, res) => {
 });
 
 router.get('/:chatId', authenticate, async (req, res) => {
+  res.setHeader(
+    'Cache-Control', 
+    'no-store, no-cache, must-revalidate, private'
+  );
+  
   try {
     const chat = await getChatById(
       req.params.chatId, 
