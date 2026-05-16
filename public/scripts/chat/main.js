@@ -1,4 +1,4 @@
-import { DOM } from './config.js';
+import { DOM, authToken } from './config.js';
 import { initModals } from './modals.js';
 import { createNewChat, openChat } from './chatManagement.js';
 import { sendMessage, stopGeneration } from './messageHandlers.js';
@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Выход из системы
   if (DOM.logoutBtnFromMenu) {
     DOM.logoutBtnFromMenu.addEventListener('click', async () => {
+       const token = localStorage.getItem('auth_token');
+
       await fetch('/api/auth/logout', {
         method: 'POST',
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
