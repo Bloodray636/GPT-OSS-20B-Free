@@ -167,32 +167,8 @@ export const applyEditMessage = async (messageDiv, newText) => {
     return;
   }
 
-  for (let i = index; i < allMessages.length; i++){
-    allMessages[i].remove();
-  }
-
-  await appendMessageToDOM('user', newText);
-  await generateNewResponse(newText);
-
-  const freshChat = await fetchJSON(`/api/chats/${state.currentChatId}`);
-
-  DOM.chatContainer.innerHTML = '';
-
-  if (freshChat.messages?.length) {
-    for (const msg of freshChat.messages) {
-      await appendMessageToDOM(msg.role, msg.content, msg.reasoning);
-    }
-  } else {
-    await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
-  }
-
-  scrollToBottom();
-
-  const localChat = state.chats.find(c => c.id === state.currentChatId);
-
-  if (localChat){
-    localChat.messages = freshChat.messages; 
-  }
+  showInfoModal('Успех', 'Сообщение изменено. Страница будет перезагружена.');
+  setTimeout(() => location.reload(), 1000);
 };
 
 export const generateNewResponse = async (userMessage) => {
