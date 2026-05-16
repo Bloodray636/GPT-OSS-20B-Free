@@ -182,6 +182,24 @@ export const openChat = async (chatId) => {
       await appendMessageToDOM('assistant', '✨ Новый чат. Напишите что-нибудь...');
     }
 
+    const userMessages = Array.from(DOM.chatContainer.querySelectorAll('.message.user'));
+
+    const seenBubbles = new Set();
+
+    for (let i = userMessages.length - 1; i >= 0; i--) {
+      const bubble = userMessages[i].querySelector('.bubble');
+
+      if (!bubble) continue;
+
+      const text = bubble.innerText;
+      
+      if (seenBubbles.has(text)) {
+        userMessages[i].style.display = 'none';
+      } else {
+        seenBubbles.add(text);
+      }
+    }
+
     scrollToBottom();
 
   } catch (err) {

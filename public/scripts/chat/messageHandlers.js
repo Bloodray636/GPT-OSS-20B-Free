@@ -36,49 +36,41 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
-    if (msgIndex !== -1) userDiv.setAttribute('data-index', msgIndex);
+    userDiv.setAttribute('data-index', msgIndex);
 
-    // Базовая часть без кнопки редактирования
-    let innerHtml = `
+    userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
       <div class="copy-user-btn" title="Копировать">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
           <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
         </svg>
       </div>
-    `;
-
-    // Добавляем кнопку редактирования только если индекс действительный
-    if (msgIndex !== -1) {
-      innerHtml += `
-        <span class="edit-icon" title="Редактировать">
+      <span class="edit-icon" title="Редактировать">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
             <path fill="currentColor" d="m21.71 4.72l-2.43-2.43a1 1 0 0 0-1.41 0l-5.58 5.58a1 1 0 0 0-.29.71V11a1 1 0 0 0 1 1h2.42a1 1 0 0 0 .71-.29l5.58-5.58a1 1 0 0 0 0-1.41M15 10h-1V9l4.58-4.58l1 1Zm4 2a1 1 0 0 0-1 1a7 7 0 0 1-7 7H5.41l.64-.63a1 1 0 0 0 0-1.42A7 7 0 0 1 11 6a1 1 0 0 0 0-2a9 9 0 0 0-7 14.62l-1.71 1.67a1 1 0 0 0-.21 1.09A1 1 0 0 0 3 22h8a9 9 0 0 0 9-9a1 1 0 0 0-1-1"/>
           </svg>
         </span>
-      `;
-    }
+    `;
 
-    userDiv.innerHTML = innerHtml;
     DOM.chatContainer.appendChild(userDiv);
 
     // Обработчик копирования
     const copyBtn = userDiv.querySelector('.copy-user-btn');
+
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(content).then(() => {
         showInfoModal('Успех', 'Сообщение скопировано');
       }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать сообщение'));
     });
 
-    // Обработчик редактирования – только если кнопка существует
+    // Обработчик редактирования
     const editIcon = userDiv.querySelector('.edit-icon');
-    if (editIcon) {
-      editIcon.addEventListener('click', () => {
-        const idx = parseInt(userDiv.getAttribute('data-index'), 10);
-        state.modals.editMessageIndex = idx;
-        showEditModal(userDiv, content);
-      });
-    }
+
+    editIcon.addEventListener('click', () => {
+      const idx = parseInt(userDiv.getAttribute('data-index'), 10);
+      state.modals.editMessageIndex = idx;
+      showEditModal(userDiv, content);
+    });
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
@@ -162,14 +154,9 @@ export const applyEditMessage = async (messageDiv, newText) => {
   }
 
   const index = state.modals.editMessageIndex;
+
   if (index === -1) {
     showInfoModal('Ошибка', 'Не удалось определить индекс сообщения');
-    return;
-  }
-
-  if (!DOM.chatContainer) {
-    console.error('DOM.chatContainer is null');
-    showInfoModal('Ошибка', 'Контейнер чата не найден');
     return;
   }
 
@@ -191,34 +178,19 @@ export const applyEditMessage = async (messageDiv, newText) => {
   // Удаляем из DOM все сообщения от редактируемого и далее
   const allMessages = Array.from(DOM.chatContainer.querySelectorAll('.message'));
 
-  if (!allMessages.length && allMessages.length !== 0) {
-    // если не массив, то allMessages – не массив
-    console.error('allMessages is not an array', allMessages);
-    showInfoModal('Ошибка', 'Ошибка получения сообщений');
-    return;
-  }
-
   for (let i = index; i < allMessages.length; i++) {
     allMessages[i].remove();
   }
 
-  // Генерируем новый ответ (сервер сохранит новое сообщение пользователя)
   await generateNewResponse(newText);
 
-  // Обновляем список чатов и перерисовываем
-  await loadChats();
-  const freshChat = state.chats.find(c => c.id === state.currentChatId);
-  if (freshChat) {
-    DOM.chatContainer.innerHTML = '';
-    for (let i = 0; i < freshChat.messages.length; i++) {
-      const msg = freshChat.messages[i];
-      await appendMessageToDOM(msg.role, msg.content, msg.reasoning, i);
+  setTimeout(() => {
+    const userMessages = Array.from(DOM.chatContainer.querySelectorAll('.message.user'));
+    // Оставляем только последнее сообщение пользователя (новое), остальные скрываем
+    for (let i = 0; i < userMessages.length - 1; i++) {
+      userMessages[i].style.display = 'none';
     }
-    scrollToBottom();
-  }
-
-  // Сбрасываем индекс редактирования
-  state.modals.editMessageIndex = -1;
+  }, 100);
 };
 
 export const generateNewResponse = async (userMessage) => {
