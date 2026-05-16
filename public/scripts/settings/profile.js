@@ -11,17 +11,23 @@ export const loadProfileData = async () => {
 
 export const loadAvatar = async () => {
   try {
-    const res = await fetch('/api/user/avatar', {
+    const res = await fetch('/api/user/avatar/proxy', {
       headers: { Authorization: `Bearer ${authToken}` }
     });
 
-    if (res.status === 404) {
-      DOM.settingsAvatar.src = '/default-avatar.svg';
-      return;
-    }
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      DOM.settingsAvatar.src = url;
 
-    const data = await res.json();
-    DOM.settingsAvatar.src = data.url || '/default-avatar.svg';
+      if (DOM.settingsAvatar.dataset.prevBlobUrl) {
+        URL.revokeObjectURL(DOM.settingsAvatar.dataset.prevBlobUrl);
+      }
+      
+      DOM.settingsAvatar.dataset.prevBlobUrl = url;
+    } else {
+      DOM.settingsAvatar.src = '/default-avatar.svg';
+    }
   } catch {
     DOM.settingsAvatar.src = '/default-avatar.svg';
   }

@@ -122,8 +122,40 @@ router.post('/upload', authenticate, upload.single('avatar'), async (req, res) =
       error: 'Failed to check profile' 
     });
   }
-  
+
   res.json({ url: publicUrl });
+});
+
+router.get('/proxy', authenticate, async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', req.user.id)
+      .single();
+
+    if (!data?.avatar_url) {
+      return res.status(404).json({ 
+        error: 'Avatar not found' 
+      });
+    }
+
+    const response = await fetch(data.avatar_url);
+    if (!response.ok) {
+      return res.status(500).json({ 
+        error: 'Failed to fetch avatar from storage' 
+      });
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    response.body.pipeTo(res);
+  } catch (err) {
+    console.error('Avatar proxy error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;
