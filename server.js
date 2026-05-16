@@ -21,6 +21,11 @@ app.use(helmet({
   },
 }));
 
+app.use((req, res, next) => {
+  res.setHeader('Alt-Svc', '');
+  next();
+});
+
 // Лимиты
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,   
