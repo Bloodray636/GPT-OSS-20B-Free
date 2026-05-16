@@ -15,7 +15,14 @@
       <input type="email" id="loginEmail" placeholder="Email" autocomplete="off">
       <div class="input-group">
         <input type="password" id="loginPassword" placeholder="Пароль">
-        <span class="toggle-password" data-target="loginPassword">👁️</span>
+        <span class="toggle-password" data-target="loginPassword">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M21.257 10.962c.474.62.474 1.457 0 2.076C19.764 14.987 16.182 19 12 19s-7.764-4.013-9.257-5.962a1.69 1.69 0 0 1 0-2.076C4.236 9.013 7.818 5 12 5s7.764 4.013 9.257 5.962"/>
+              <circle cx="12" cy="12" r="3"/>
+            </g>
+          </svg>
+        </span>
       </div>
       <button id="loginBtn">Войти</button>
       <div class="auth-switch">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></div>
@@ -24,17 +31,31 @@
 
     <!-- Форма регистрации -->
     <div id="registerForm" class="auth-card" style="display: none;">
-      <h1>GPT-OSS-20B</h1>
+      <h1>Vortex</h1>
       <div class="sub">Создайте аккаунт</div>
       <input type="text" id="regUsername" placeholder="Имя пользователя (буквы, цифры, _)">
       <input type="email" id="regEmail" placeholder="Email">
       <div class="input-group">
         <input type="password" id="regPassword" placeholder="Пароль (мин. 6 символов)">
-        <span class="toggle-password" data-target="regPassword">👁️</span>
+        <span class="toggle-password" data-target="regPassword">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M21.257 10.962c.474.62.474 1.457 0 2.076C19.764 14.987 16.182 19 12 19s-7.764-4.013-9.257-5.962a1.69 1.69 0 0 1 0-2.076C4.236 9.013 7.818 5 12 5s7.764 4.013 9.257 5.962"/>
+              <circle cx="12" cy="12" r="3"/>
+            </g>
+          </svg>
+        </span>
       </div>
       <div class="input-group">
         <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
-        <span class="toggle-password" data-target="regPasswordConfirm">👁️</span>
+        <span class="toggle-password" data-target="regPasswordConfirm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path d="M21.257 10.962c.474.62.474 1.457 0 2.076C19.764 14.987 16.182 19 12 19s-7.764-4.013-9.257-5.962a1.69 1.69 0 0 1 0-2.076C4.236 9.013 7.818 5 12 5s7.764 4.013 9.257 5.962"/>
+              <circle cx="12" cy="12" r="3"/>
+            </g>
+          </svg>
+        </span>
       </div>
       <button id="registerBtn">Зарегистрироваться</button>
       <div class="auth-switch">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></div>
