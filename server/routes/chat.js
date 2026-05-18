@@ -5,12 +5,52 @@ import { getUserSettings, getChatById, saveChat } from '../db.js';
 
 const router = express.Router();
 
+const isSuspiciousContent = (text) => {
+  if (!text) return false;
+
+  if (/(\S)\1{20,}/.test(text)) {
+    return true;
+  }
+  
+  const repeatMatch = text.match(/(?:повтори|repeat|напиши|скажи|покажи)\s+(\d+)\s+раз/i);
+
+  if (repeatMatch && parseInt(repeatMatch[1], 10) > 100) {
+    return true;
+  }
+
+  const words = text.toLowerCase().split(/\s+/);
+
+  const freq = {};
+
+  for (const w of words) {
+    if (w.length > 2) {
+      freq[w] = (freq[w] || 0) + 1;
+      if (freq[w] > 20) return true;
+    }
+  }
+  
+  const suspiciousMatches = (text.match(/﷽/g) || []).length;
+
+  if (suspiciousMatches > 10) {
+    return true;
+  }
+  
+  return false;
+};
+
+
 router.post('/', authenticate, async (req, res) => {
   const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
 
   if (!chatId || !newMessage) {
     return res.status(400).json({ 
       error: 'chatId and newMessage required' 
+    });
+  }
+
+  if (isSuspiciousContent(newMessage)) {
+    return res.status(400).json({ 
+      error: 'Ваш запрос содержит подозрительные повторения и был отклонён.' 
     });
   }
 
