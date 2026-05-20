@@ -77,7 +77,7 @@ router.post('/register', validate(registerSchema), async (req, res) => {
     const userId = data.user.id;
 
     createUserSettingsAndProfile(userId, username);
-    
+
     await new Promise(resolve => setTimeout(resolve, 500));
 
     let token = null;
@@ -202,7 +202,7 @@ router.post('/change-username', authenticate, validate(changeUsernameSchema), as
 // Удаление аккаунта
 router.delete('/delete-account', authenticate, validate(deleteAccountSchema), async (req, res) => {
   const { password } = req.body;
-
+  
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Admin client not configured' });
   }
@@ -217,7 +217,14 @@ router.delete('/delete-account', authenticate, validate(deleteAccountSchema), as
   }
 
   await supabase.from('profiles').delete().eq('id', req.user.id);
-  await supabaseAdmin.auth.admin.deleteUser(req.user.id);
+
+  // 2. Удаляем пользователя из auth.users
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(req.user.id);
+  if (deleteError) {
+    console.error('Delete user error:', deleteError);
+    return res.status(500).json({ error: 'Failed to delete account. Please try again.' });
+  }
+
   res.json({ success: true });
 });
 
