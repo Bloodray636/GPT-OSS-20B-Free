@@ -3,7 +3,41 @@ import { escapeHtml, scrollToBottom, fetchJSON } from './utils.js';
 import { showInfoModal, showEditModal } from './modals.js';
 import { loadChats } from './chatManagement.js';
 
-// Вспомогательная для копирования кода (использует showInfoModal)
+const DRAFT_KEY = 'chat_draft';
+let draftTimer = null;
+
+const saveDraft = (text) => {
+  if (text && text.trim()) {
+    localStorage.setItem(DRAFT_KEY, text);
+  } else {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+};
+
+const loadDraft = () => {
+  localStorage.getItem(DRAFT_KEY) || '';
+}
+
+const clearDraft = () => {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+export const initDraft = () => {
+  DOM.userInput.value = loadDraft();
+
+  DOM.userInput.addEventListener('input', () => {
+    if (draftTimer) {
+      clearTimeout(draftTimer);
+    }
+    
+    draftTimer = setTimeout(() => {
+      saveDraft(DOM.userInput.value);
+    }, 500);
+  });
+};
+
+
+// Вспомогательная для копирования кода
 const attachCopyToCodeBlocks = (container) => {
   if (!container) return;
 
@@ -68,6 +102,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     editIcon.addEventListener('click', () => {
       showEditModal(userDiv, content);
     });
+
   } else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
@@ -262,6 +297,8 @@ export const sendMessage = async () => {
   if (!text || state.streaming) return;
 
   DOM.userInput.value = '';
+
+  clearDraft();
 
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);

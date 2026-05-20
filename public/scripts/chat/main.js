@@ -3,6 +3,7 @@ import { initModals } from './modals.js';
 import { createNewChat, openChat } from './chatManagement.js';
 import { sendMessage, stopGeneration } from './messageHandlers.js';
 import { checkAuth } from './auth.js';
+import { initDraft } from './messageHandlers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
       sendMessage();
     }
   });
+
+  initDraft();
 
   // Меню пользователя
   if (DOM.userMenuTrigger && DOM.userDropdown) {
