@@ -1,0 +1,37 @@
+import { getChatById, saveChat } from '../db.js';
+
+export async function getOrCreateChat(chatId, userId) {
+  let chat = await getChatById(chatId, userId);
+
+  if (!chat) {
+    chat = {
+      id: chatId,
+      title: 'Новый чат',
+      createdAt: new Date().toISOString(),
+      messages: [],
+    };
+  }
+
+  return chat;
+}
+
+export function addUserMessage(chat, content) {
+  chat.messages.push({ role: 'user', content });
+}
+
+export function addAssistantMessage(chat, assistantContent, assistantReasoning) {
+  chat.messages.push({
+    role: 'assistant',
+    content: assistantContent,
+    reasoning: assistantReasoning,
+  });
+
+  let titleUpdated = false;
+
+  if (chat.title === 'Новый чат' && assistantContent.length > 10) {
+    chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
+    titleUpdated = true;
+  }
+  
+  return titleUpdated;
+}

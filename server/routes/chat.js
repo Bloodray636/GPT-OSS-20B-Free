@@ -1,7 +1,9 @@
 import express from 'express';
 import { authenticate } from '../middleware.js';
-import { openai } from '../config.js';
-import { getUserSettings, getChatById, saveChat } from '../db.js';
+import { getUserSettings } from '../db.js';
+import { streamAIResponse } from '../services/aiService.js';
+import { getOrCreateChat, addUserMessage, addAssistantMessage } from '../services/chatStorage.js';
+import { saveChat } from '../db.js';
 
 const router = express.Router();
 
@@ -9,84 +11,48 @@ router.post('/', authenticate, async (req, res) => {
   const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
 
   if (!chatId || !newMessage) {
-    return res.status(400).json({ 
-      error: 'chatId and newMessage required' 
-    });
+    return res.status(400).json({ error: 'chatId and newMessage required' });
   }
 
+  // Настройки пользователя
   const settings = await getUserSettings(req.user.id);
   const shouldSave = settings.saveHistory;
 
-  let chat = await getChatById(chatId, req.user.id);
-
-  if (!chat) {
-    chat = {
-      id: chatId,
-      title: 'Новый чат',
-      createdAt: new Date().toISOString(),
-      messages: [],
-    };
-  }
+  // Создание чата
+  let chat = await getOrCreateChat(chatId, req.user.id);
 
   if (shouldSave) {
-    chat.messages.push({ 
-      role: 'user', 
-      content: newMessage 
-    });
+    addUserMessage(chat, newMessage);
   }
 
-  const openAiMessages = chat.messages.map(msg => ({ 
-    role: msg.role, 
-    content: msg.content 
+  const openAiMessages = chat.messages.map(msg => ({
+    role: msg.role,
+    content: msg.content,
   }));
 
-  res.setHeader(
-    'Content-Type', 
-    'text/event-stream'
-  );
-
-  res.setHeader(
-    'Cache-Control', 
-    'no-cache'
-  );
-
-  res.setHeader(
-    'Connection', 
-    'keep-alive'
-  );
+  // SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-oss-120b',
-      messages: openAiMessages,
-      temperature: 1,
-      top_p: 1,
-      max_tokens: 4096,
-      stream: true,
-      extra_body: { 
-        chat_template_kwargs: { 
-          thinking: true, 
-          reasoning_effort 
-        } 
-      },
-    });
+    let assistantContent = '';
+    let assistantReasoning = '';
 
-    let assistantContent = '', assistantReasoning = '';
-
-    for await (const chunk of completion) {
-      const reasoning = chunk.choices[0]?.delta?.reasoning || chunk.choices[0]?.delta?.reasoning_content;
-      const content = chunk.choices[0]?.delta?.content || '';
-
+    // Генерирация ответа
+    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort)) {
       if (reasoning) {
         assistantReasoning += reasoning;
+
         res.write(`data: ${JSON.stringify({ 
           type: 'reasoning',
            text: reasoning 
-          })}\n\n`);
+        })}\n\n`);
       }
 
       if (content) {
         assistantContent += content;
+        
         res.write(`data: ${JSON.stringify({ 
           type: 'content', 
           text: content 
@@ -95,30 +61,21 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-
     res.end();
 
+    // Сохранение ответа
     if (shouldSave) {
-      chat.messages.push({ 
-        role: 'assistant', 
-        content: assistantContent, 
-        reasoning: assistantReasoning 
-      });
-
-      if (chat.title === 'Новый чат' && assistantContent.length > 10) {
-        chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
-      }
-
+      addAssistantMessage(chat, assistantContent, assistantReasoning);
       await saveChat(chat, req.user.id);
     }
+
   } catch (err) {
+    console.error(err);
+
     if (!res.headersSent) {
       res.status(500).json({ error: err.message });
     } else {
-      res.write(`data: ${JSON.stringify({ 
-        type: 'error', 
-        message: err.message 
-      })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
     }
   }
 });
