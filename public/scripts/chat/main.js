@@ -43,8 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  initDraft();
-
   // Меню пользователя
   if (DOM.userMenuTrigger && DOM.userDropdown) {
     DOM.userMenuTrigger.addEventListener('click', (e) => {
@@ -97,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  initDraft();
 
   checkAuth();
 });

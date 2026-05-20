@@ -3,26 +3,33 @@ import { escapeHtml, scrollToBottom, fetchJSON } from './utils.js';
 import { showInfoModal, showEditModal } from './modals.js';
 import { loadChats } from './chatManagement.js';
 
-const DRAFT_KEY = 'chat_draft';
+const getDraftKey = () => `chat_draft_${state.currentChatId}`;
 let draftTimer = null;
 
 const saveDraft = (text) => {
+  const key = getDraftKey();
+
   if (text && text.trim()) {
-    localStorage.setItem(DRAFT_KEY, text);
+    localStorage.setItem(key, text);
   } else {
-    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(key);
   }
 };
 
-const loadDraft = () => {
-  localStorage.getItem(DRAFT_KEY) || '';
-}
+export const loadDraft = () => {
+  const key = getDraftKey();
+  return localStorage.getItem(key) || '';
+};
 
-const clearDraft = () => {
-  localStorage.removeItem(DRAFT_KEY);
-}
+
+export const clearDraftForChat = () => {
+  const key = getDraftKey();
+  localStorage.removeItem(key);
+};
 
 export const initDraft = () => {
+  if (!DOM.userInput) return;
+
   DOM.userInput.value = loadDraft();
 
   DOM.userInput.addEventListener('input', () => {
@@ -298,7 +305,7 @@ export const sendMessage = async () => {
 
   DOM.userInput.value = '';
 
-  clearDraft();
+   clearDraftForChat();
 
   await appendMessageToDOM('user', text);
   await generateNewResponse(text);

@@ -2,6 +2,7 @@ import { authToken, state, DOM } from './config.js';
 import { fetchJSON, scrollToBottom } from './utils.js';
 import { showInfoModal, showConfirm, showRenameModal, closeAllModals } from './modals.js';
 import { appendMessageToDOM } from './messageHandlers.js';
+import { loadDraft } from './messageHandlers.js';
 
 export const renderChatList = () => {
   DOM.chatList.innerHTML = '';
@@ -198,6 +199,9 @@ export const openChat = async (chatId) => {
         seenBubbles.add(text);
       }
     }
+
+    const draft = loadDraft();
+    DOM.userInput.value = draft;
 
     scrollToBottom();
 
