@@ -13,6 +13,38 @@ const app = express();
 // Helmet
 app.use(helmet());
 
+// Health check
+app.get('/health', async (req, res) => {
+  const healthInfo = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+  };
+
+  // Проверка БД
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .select('count', { 
+        count: 'exact', 
+        head: true 
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    healthInfo.database = 'connected';
+  } catch (err) {
+    healthInfo.database = 'error';
+    healthInfo.status = 'degraded';
+    healthInfo.db_error = err.message;
+  }
+  
+  res.status(healthInfo.status === 'ok' ? 200 : 500).json(healthInfo);
+});
+
 // Общий лимитер
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -20,6 +52,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 app.use(limiter);
 
 // Лимитер для чувствительных маршрутов
