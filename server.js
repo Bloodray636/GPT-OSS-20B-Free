@@ -25,7 +25,7 @@ app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/change-password', authLimiter);
 
 // Стандартные middleware
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static('public'));
 
 // Логирование HTTP‑запросов
