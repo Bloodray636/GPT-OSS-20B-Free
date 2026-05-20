@@ -12,6 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
   elements.loginBtn.addEventListener('click', handleLogin);
   elements.registerBtn.addEventListener('click', handleRegister);
 
-  // Глазки для паролей
+  // Отображение паролей
   initTogglePassword();
 });

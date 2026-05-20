@@ -1,4 +1,3 @@
-// server/logger.js
 import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +19,7 @@ const level = () => {
   return env === 'development' ? 'debug' : 'info';
 };
 
-// Цвета для уровней (только для консоли)
+// Цвета для уровней
 winston.addColors({
   error: 'red',
   warn: 'yellow',
@@ -29,21 +28,24 @@ winston.addColors({
   debug: 'white',
 });
 
-// Формат для файлов (подробный, с мета-данными)
+// Формат для файлов
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
+
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
+
     if (meta && Object.keys(meta).length) {
       log += ` ${JSON.stringify(meta)}`;
     }
+
     return log;
   })
 );
 
-// Формат для консоли (цветной, краткий)
+// Формат для консоли
 const consoleFormat = winston.format.combine(
   winston.format.colorize({ all: true }),
   winston.format.timestamp({ format: 'HH:mm:ss' }),
@@ -54,19 +56,21 @@ const consoleFormat = winston.format.combine(
 const transports = [
   new winston.transports.Console({
     format: consoleFormat,
-    forceConsole: true, // нужно для Vercel
+    forceConsole: true,
   }),
 ];
 
-// Добавляем файловые транспорты только в режиме разработки или при явном указании
+// Файловые для разработки
 if (process.env.NODE_ENV === 'development' || process.env.LOCAL_LOGS === 'true') {
   const logDir = path.join(__dirname, '../logs');
+
   transports.push(
     new winston.transports.File({
       filename: path.join(logDir, 'error.log'),
       level: 'error',
       format: fileFormat,
     }),
+    
     new winston.transports.File({
       filename: path.join(logDir, 'combined.log'),
       format: fileFormat,

@@ -1,7 +1,9 @@
 import express from 'express';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import { logger } from './server//lib/logger.js'; 
+import { limiter, authLimiter } from './server/middleware/rateLimit.js';
+import { httpLogger } from './server/middleware/logging.js';
+import { errorHandler } from './server/middleware/errorHandler.js';
+import healthRoutes from './server/routes/health.js';
 import authRoutes from './server/routes/auth.js';
 import settingsRoutes from './server/routes/settings.js';
 import chatsRoutes from './server/routes/chats.js';
@@ -10,80 +12,33 @@ import chatRoutes from './server/routes/chat.js';
 
 const app = express();
 
-// Helmet
+// Безопасность
 app.use(helmet());
 
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-  });
-});
+// Health check
+app.use('/health', healthRoutes);
 
-// Общий лимитер
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
+// Rate limiting
 app.use(limiter);
-
-// Лимитер для чувствительных маршрутов
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-});
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/change-password', authLimiter);
 
+// Стандартные middleware
 app.use(express.json());
 app.use(express.static('public'));
 
-// HTTP-логирование запросов
-app.use((req, res, next) => {
-  const start = Date.now();
+// Логирование HTTP‑запросов
+app.use(httpLogger);
 
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-
-    logger.http(`${req.method} ${req.url} ${res.statusCode} - ${duration}ms`, {
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      duration,
-      ip: req.ip,
-    });
-
-  });
-
-  next();
-});
-
-// Подключаем маршруты
+// Основные API
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/chats', chatsRoutes);
 app.use('/api/user/avatar', avatarRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Обработчик ошибок
-app.use((err, req, res, next) => {
-  logger.error(
-    `Unhandled error: ${err.message}`, 
-    { stack: err.stack, url: req.url }
-  );
-
-  res.status(500).json({ 
-    error: 'Internal server error' 
-  });
-});
+// Глобальный обработчик ошибок
+app.use(errorHandler);
 
 export default app;
