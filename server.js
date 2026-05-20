@@ -66,8 +66,14 @@ app.use('/api/chat', chatRoutes);
 
 // Обработчик ошибок
 app.use((err, req, res, next) => {
-  logger.error(`Unhandled error: ${err.message}`, { stack: err.stack, url: req.url });
-  res.status(500).json({ error: 'Internal server error' });
+  logger.error(
+    `Unhandled error: ${err.message}`, 
+    { stack: err.stack, url: req.url }
+  );
+
+  res.status(500).json({ 
+    error: 'Internal server error' 
+  });
 });
 
 export default app;

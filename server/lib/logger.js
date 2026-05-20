@@ -1,10 +1,11 @@
+// server/logger.js
 import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Уровни логирования
+// Определяем уровни
 const levels = {
   error: 0,
   warn: 1,
@@ -13,13 +14,13 @@ const levels = {
   debug: 4,
 };
 
-// Окружения
+// Уровень логирования в зависимости от окружения
 const level = () => {
   const env = process.env.NODE_ENV || 'development';
   return env === 'development' ? 'debug' : 'info';
 };
 
-// Цвета
+// Цвета для уровней (только для консоли)
 winston.addColors({
   error: 'red',
   warn: 'yellow',
@@ -28,24 +29,21 @@ winston.addColors({
   debug: 'white',
 });
 
-// Форматы
-const format = winston.format.combine(
+// Формат для файлов (подробный, с мета-данными)
+const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
-
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-
     if (meta && Object.keys(meta).length) {
       log += ` ${JSON.stringify(meta)}`;
     }
-
     return log;
   })
-
 );
 
+// Формат для консоли (цветной, краткий)
 const consoleFormat = winston.format.combine(
   winston.format.colorize({ all: true }),
   winston.format.timestamp({ format: 'HH:mm:ss' }),
@@ -53,28 +51,27 @@ const consoleFormat = winston.format.combine(
 );
 
 // Транспорты
-const transports = [];
+const transports = [
+  new winston.transports.Console({
+    format: consoleFormat,
+    forceConsole: true, // нужно для Vercel
+  }),
+];
 
-// Консоль всегда
-transports.push(new winston.transports.Console({
-  format: consoleFormat,
-  forceConsole: true,
-}));
-
-// Файлы только локально
+// Добавляем файловые транспорты только в режиме разработки или при явном указании
 if (process.env.NODE_ENV === 'development' || process.env.LOCAL_LOGS === 'true') {
   const logDir = path.join(__dirname, '../logs');
-
-  transports.push(new winston.transports.File({
-    filename: path.join(logDir, 'error.log'),
-    level: 'error',
-    format,
-  }));
-
-  transports.push(new winston.transports.File({
-    filename: path.join(logDir, 'combined.log'),
-    format,
-  }));
+  transports.push(
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      format: fileFormat,
+    }),
+    new winston.transports.File({
+      filename: path.join(logDir, 'combined.log'),
+      format: fileFormat,
+    })
+  );
 }
 
 export const logger = winston.createLogger({
