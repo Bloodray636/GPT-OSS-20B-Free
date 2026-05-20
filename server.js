@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { logger } from './server//lib/logger.js'; 
 import authRoutes from './server/routes/auth.js';
 import settingsRoutes from './server/routes/settings.js';
 import chatsRoutes from './server/routes/chats.js';
@@ -36,6 +37,26 @@ app.use('/api/auth/change-password', authLimiter);
 app.use(express.json());
 app.use(express.static('public'));
 
+// HTTP-логирование запросов
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+
+    logger.http(`${req.method} ${req.url} ${res.statusCode} - ${duration}ms`, {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      duration,
+      ip: req.ip,
+    });
+
+  });
+
+  next();
+});
+
 // Подключаем маршруты
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
@@ -45,7 +66,7 @@ app.use('/api/chat', chatRoutes);
 
 // Обработчик ошибок
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  logger.error(`Unhandled error: ${err.message}`, { stack: err.stack, url: req.url });
   res.status(500).json({ error: 'Internal server error' });
 });
 
