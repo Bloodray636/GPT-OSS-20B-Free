@@ -33,16 +33,6 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  // Контроллер для отмены запроса к модели
-  const abortController = new AbortController();
-
-  req.on('close', () => {
-    if (!res.headersSent) {
-      abortController.abort();
-      console.log('Client disconnected, aborting OpenAI request');
-    }
-  });
-
   try {
     let assistantContent = '';
     let assistantReasoning = '';
@@ -68,32 +58,20 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       }
     }
 
-    if (!req.closed && !res.destroyed) {
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-      res.end();
-    }
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
 
-    if (shouldSave && !req.closed && !res.destroyed) {
+    if (shouldSave) {
       addAssistantMessage(chat, assistantContent, assistantReasoning);
       await saveChat(chat, req.user.id);
     }
 
   } catch (err) {
-    if (err.name === 'AbortError') {
-      console.log('Stream aborted by client');
-
-      if (!res.headersSent && !res.destroyed) {
-        res.end();
-      }
-
-      return;
-    }
-
     console.error('Stream error:', err);
 
-    if (!res.headersSent && !req.closed && !res.destroyed) {
+    if (!res.headersSent) {
       res.status(500).json({ error: err.message });
-    } else if (!res.destroyed) {
+    } else {
       res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
       res.end();
     }
