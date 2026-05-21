@@ -39,6 +39,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       console.log('Client disconnected after stream started, aborting OpenAI request');
     }
   };
+
   req.on('close', onClose);
 
   try {
@@ -52,6 +53,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ type: 'reasoning', text: reasoning })}\n\n`);
       }
+
       if (content) {
         assistantContent += content;
         res.write(`data: ${JSON.stringify({ type: 'content', text: content })}\n\n`);
@@ -68,9 +70,15 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   } catch (err) {
     if (err.name === 'AbortError') {
       console.log('Stream aborted by client');
-      if (!res.headersSent && !res.destroyed) res.end();
+
+      if (!res.headersSent && !res.destroyed){
+        res.end();
+      }
+
       return;
     }
+
+    
     console.error('Stream error:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: err.message });

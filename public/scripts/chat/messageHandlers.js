@@ -178,10 +178,9 @@ export const updateContent = (text) => {
 
     state.streamingData.contentDiv.dataset.raw += text;
     
-    const raw = state.streamingData.contentDiv.dataset.raw.replace(/!\[.*?\]\(data:image\/[^)]+\)/g, '[Изображение не поддерживается]');
-    state.streamingData.contentDiv.innerHTML = marked.parse(raw, { async: false });
-    attachCopyToCodeBlocks(state.streamingData.contentDiv);
-
+    const rendered = marked.parse(state.streamingData.contentDiv.dataset.raw, { async: false });
+    state.streamingData.contentDiv.innerHTML = rendered;
+    
     scrollToBottom();
   }
 };
