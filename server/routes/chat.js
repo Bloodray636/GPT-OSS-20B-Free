@@ -2,31 +2,23 @@ import express from 'express';
 import { authenticate } from '../middleware.js';
 import { validate } from '../middleware/validation.js';
 import { sendMessageSchema } from '../validation/schemas.js';
-import { getUserSettings, getChatById, saveChat } from '../db.js';
+import { getUserSettings } from '../db.js';
 import { streamAIResponse } from '../services/aiService.js';
+import { getOrCreateChat, addUserMessage, addAssistantMessage } from '../services/chatStorage.js';
+import { saveChat } from '../db.js';
 
 const router = express.Router();
 
 router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => {
-  const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
+  const { chatId, newMessage, reasoning_effort } = req.body;
 
-  // Настройки пользователя
   const settings = await getUserSettings(req.user.id);
   const shouldSave = settings.saveHistory;
 
-  // Загружаем чат или создаём новый
-  let chat = await getChatById(chatId, req.user.id);
-  if (!chat) {
-    chat = {
-      id: chatId,
-      title: 'Новый чат',
-      createdAt: new Date().toISOString(),
-      messages: [],
-    };
-  }
+  let chat = await getOrCreateChat(chatId, req.user.id);
 
   if (shouldSave) {
-    chat.messages.push({ role: 'user', content: newMessage });
+    addUserMessage(chat, newMessage);
   }
 
   const openAiMessages = chat.messages.map(msg => ({
@@ -34,16 +26,28 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     content: msg.content,
   }));
 
-  // SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+
+  const abortController = new AbortController();
+  let streamStarted = false;
+
+  const onClose = () => {
+    if (!res.headersSent && !abortController.signal.aborted && streamStarted) {
+      abortController.abort();
+      console.log('Client disconnected after stream started, aborting OpenAI request');
+    }
+  };
+  req.on('close', onClose);
 
   try {
     let assistantContent = '';
     let assistantReasoning = '';
 
-    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort)) {
+    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal)) {
+      if (!streamStarted) streamStarted = true;
+
       if (reasoning) {
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ type: 'reasoning', text: reasoning })}\n\n`);
@@ -58,13 +62,15 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     res.end();
 
     if (shouldSave) {
-      chat.messages.push({ role: 'assistant', content: assistantContent, reasoning: assistantReasoning });
-      if (chat.title === 'Новый чат' && assistantContent.length > 10) {
-        chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
-      }
+      addAssistantMessage(chat, assistantContent, assistantReasoning);
       await saveChat(chat, req.user.id);
     }
   } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('Stream aborted by client');
+      if (!res.headersSent && !res.destroyed) res.end();
+      return;
+    }
     console.error('Stream error:', err);
     if (!res.headersSent) {
       res.status(500).json({ error: err.message });
@@ -72,6 +78,8 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
       res.end();
     }
+  } finally {
+    req.removeListener('close', onClose);
   }
 });
 
