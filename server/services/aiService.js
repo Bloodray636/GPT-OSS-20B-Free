@@ -3,7 +3,7 @@ import { openai } from '../config.js';
 export async function* streamAIResponse(messages, reasoningEffort = 'medium', signal) {
   const completion = await openai.chat.completions.create(
     {
-      model: 'deepseek-ai/deepseek-v4-flash',
+      model: 'openai/gpt-oss-120b',
       messages,
       temperature: 1,
       top_p: 0.95,
