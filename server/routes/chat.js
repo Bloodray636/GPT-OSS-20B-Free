@@ -33,15 +33,26 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
+  // Контроллер для отмены запроса к модели
+  const abortController = new AbortController();
+
+  req.on('close', () => {
+    if (!res.headersSent) {
+      abortController.abort();
+      console.log('Client disconnected, aborting OpenAI request');
+    }
+  });
+
   try {
     let assistantContent = '';
     let assistantReasoning = '';
 
     // Генерирация ответа
-    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort)) {
+    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal)) {
+      if (req.closed || res.destroyed) break;
+      
       if (reasoning) {
         assistantReasoning += reasoning;
-
         res.write(`data: ${JSON.stringify({ 
           type: 'reasoning',
           text: reasoning 
@@ -50,7 +61,6 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
 
       if (content) {
         assistantContent += content;
-        
         res.write(`data: ${JSON.stringify({ 
           type: 'content', 
           text: content 
@@ -58,22 +68,34 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       }
     }
 
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-    res.end();
+    if (!req.closed && !res.destroyed) {
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      res.end();
+    }
 
-    // Сохранение ответа
-    if (shouldSave) {
+    if (shouldSave && !req.closed && !res.destroyed) {
       addAssistantMessage(chat, assistantContent, assistantReasoning);
       await saveChat(chat, req.user.id);
     }
 
   } catch (err) {
-    console.error(err);
+    if (err.name === 'AbortError') {
+      console.log('Stream aborted by client');
 
-    if (!res.headersSent) {
+      if (!res.headersSent && !res.destroyed) {
+        res.end();
+      }
+
+      return;
+    }
+
+    console.error('Stream error:', err);
+
+    if (!res.headersSent && !req.closed && !res.destroyed) {
       res.status(500).json({ error: err.message });
-    } else {
+    } else if (!res.destroyed) {
       res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+      res.end();
     }
   }
 });
