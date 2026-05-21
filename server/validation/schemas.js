@@ -66,6 +66,12 @@ export const truncateChatSchema = z.object({
     .min(-1, 'keepIndex не может быть меньше -1'),
 });
 
+export const updateMessageSchema = z.object({
+  content: z.string()
+    .min(1, 'Сообщение не может быть пустым')
+    .max(5000, 'Сообщение слишком длинное'),
+});
+
 export const sendMessageSchema = z.object({
   chatId: chatIdSchema,
   newMessage: messageSchema,
@@ -81,5 +87,12 @@ export const chatIdParamSchema = z.object({
 
 export const messageIndexParamSchema = z.object({
   chatId: chatIdSchema,
-  messageIndex: z.string().regex(/^\d+$/, 'messageIndex должен быть числом').transform(Number),
+  messageIndex: z.string()
+    .regex(/^\d+$/, 'messageIndex должен быть числом')
+    .transform(Number),
+});
+
+export const settingsSchema = z.object({
+  theme: z.enum(['dark', 'light']).optional(),
+  saveHistory: z.boolean().optional(),
 });

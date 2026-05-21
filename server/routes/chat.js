@@ -1,5 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware.js';
+import { validate } from '../middleware/validation.js';
+import { sendMessageSchema } from '../validation/schemas.js';
 import { getUserSettings } from '../db.js';
 import { streamAIResponse } from '../services/aiService.js';
 import { getOrCreateChat, addUserMessage, addAssistantMessage } from '../services/chatStorage.js';
@@ -7,12 +9,8 @@ import { saveChat } from '../db.js';
 
 const router = express.Router();
 
-router.post('/', authenticate, async (req, res) => {
-  const { chatId, newMessage, reasoning_effort = 'medium' } = req.body;
-
-  if (!chatId || !newMessage) {
-    return res.status(400).json({ error: 'chatId and newMessage required' });
-  }
+router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => {
+  const { chatId, newMessage, reasoning_effort } = req.body;
 
   // Настройки пользователя
   const settings = await getUserSettings(req.user.id);
@@ -46,7 +44,7 @@ router.post('/', authenticate, async (req, res) => {
 
         res.write(`data: ${JSON.stringify({ 
           type: 'reasoning',
-           text: reasoning 
+          text: reasoning 
         })}\n\n`);
       }
 

@@ -1,6 +1,23 @@
 import express from 'express';
 import { authenticate } from '../middleware.js';
-import { getChats, getChatById, saveChat, deleteChat } from '../db.js';
+import { validate } from '../middleware/validation.js';
+
+import {
+  createChatSchema,
+  renameChatSchema,
+  truncateChatSchema,
+  updateMessageSchema,
+  chatIdParamSchema,
+  messageIndexParamSchema,
+} from '../validation/schemas.js';
+
+import { 
+  getChats, 
+  getChatById, 
+  saveChat, 
+  deleteChat 
+} from '../db.js';
+
 import { supabase } from '../config.js';
 
 const router = express.Router();
@@ -17,7 +34,6 @@ router.get('/', authenticate, async (req, res) => {
 
   try {
     const chats = await getChats(req.user.id);
-
     res.json(chats);
   } catch (err) {
     res.status(500).json({ 
@@ -26,7 +42,9 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, validate(createChatSchema), async (req, res) => {
+  const { title } = req.body;
+
   const newChat = {
     id: Date.now().toString(),
     title: 'Новый чат',
@@ -48,7 +66,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/:chatId', authenticate, async (req, res) => {
+router.delete('/:chatId', authenticate, validate(chatIdParamSchema, 'params'), async (req, res) => {
   try {
     await deleteChat(
       req.params.chatId, 
@@ -63,14 +81,8 @@ router.delete('/:chatId', authenticate, async (req, res) => {
   }
 });
 
-router.put('/:chatId', authenticate, async (req, res) => {
+router.put('/:chatId', authenticate, validate(chatIdParamSchema, 'params'), validate(renameChatSchema), async (req, res) => {
   const { title } = req.body;
-
-  if (!title) {
-    return res.status(400).json({ 
-      error: 'Title required' 
-    });
-  }
 
   const { error } = await supabase
     .from('chats')
@@ -87,14 +99,8 @@ router.put('/:chatId', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-router.put('/:chatId/truncate', authenticate, async (req, res) => {
+router.put('/:chatId/truncate', authenticate, validate(chatIdParamSchema, 'params'), validate(truncateChatSchema), async (req, res) => {
   const { keepIndex } = req.body;
-
-  if (typeof keepIndex !== 'number') {
-    return res.status(400).json({ 
-      error: 'keepIndex required' 
-    });
-  }
 
   try {
     const chat = await getChatById(
@@ -131,13 +137,10 @@ router.put('/:chatId/truncate', authenticate, async (req, res) => {
   }
 });
 
-router.put('/:chatId/messages/:messageIndex', authenticate, async (req, res) => {
+router.put('/:chatId/messages/:messageIndex', authenticate, validate(chatIdParamSchema, 'params'), validate(messageIndexParamSchema, 'params'), validate(updateMessageSchema), async (req, res) => {
   const { chatId, messageIndex } = req.params;
   const { content } = req.body;
-
-  if (!content) return res.status(400).json({ 
-    error: 'content required' 
-  });
+  const idx = parseInt(messageIndex, 10);
 
   try {
     const chat = await getChatById(chatId, req.user.id);
@@ -146,9 +149,7 @@ router.put('/:chatId/messages/:messageIndex', authenticate, async (req, res) => 
       error: 'Chat not found' 
     });
 
-    const idx = parseInt(messageIndex, 10);
-
-    if (isNaN(idx) || idx < 0 || idx >= chat.messages.length) {
+    if (idx < 0 || idx >= chat.messages.length) {
       return res.status(400).json({ 
         error: 'Invalid message index' 
       });
@@ -161,7 +162,6 @@ router.put('/:chatId/messages/:messageIndex', authenticate, async (req, res) => 
     }
 
     chat.messages[idx].content = content;
-
     chat.messages = chat.messages.slice(0, idx + 1);
 
     await saveChat(chat, req.user.id);
@@ -174,7 +174,7 @@ router.put('/:chatId/messages/:messageIndex', authenticate, async (req, res) => 
   }
 });
 
-router.get('/:chatId', authenticate, async (req, res) => {
+router.get('/:chatId', authenticate, validate(chatIdParamSchema, 'params'), async (req, res) => {
   setNoCacheHeaders(res);
 
   try {
