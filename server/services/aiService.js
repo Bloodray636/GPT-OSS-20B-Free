@@ -1,6 +1,6 @@
 import { openai } from '../config.js';
 
-export async function* streamAIResponse(messages, reasoningEffort, signal) {
+export async function* streamAIResponse(messages, reasoningEffort = 'medium', signal) {
   const completion = await openai.chat.completions.create({
     model: 'openai/gpt-oss-120b',
     messages,
@@ -14,7 +14,9 @@ export async function* streamAIResponse(messages, reasoningEffort, signal) {
         reasoning_effort: reasoningEffort,
       },
     },
-  }, { signal });
+  },
+  { signal }
+);
 
   for await (const chunk of completion) {
     const reasoning = chunk.choices[0]?.delta?.reasoning || chunk.choices[0]?.delta?.reasoning_content;
