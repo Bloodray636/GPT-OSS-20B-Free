@@ -18,7 +18,7 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
 
   const options = {
     model,
-    reasoning_effort: reasoningEffort,  // передаём в options как reasoning_effort
+    reasoning_effort: reasoningEffort,
     max_tokens: MAX_TOKENS,
     temperature: 1,
     top_p: 1,
@@ -26,7 +26,10 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
 
   const stream = aiProvider.streamCompletion(messages, options, signal);
   for await (const { reasoning, content } of stream) {
-    if (reasoning) assistantReasoning += reasoning;
+    if (reasoning) {
+      assistantReasoning += reasoning;
+    }
+    
     if (content) {
       assistantContent += content;
       yield { reasoning, content };
