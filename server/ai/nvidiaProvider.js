@@ -32,7 +32,7 @@ export class NvidiaProvider extends AIProvider {
           },
         },
       },
-      { signal }
+      signal ? { signal } : {}
     );
 
     for await (const chunk of completion) {
