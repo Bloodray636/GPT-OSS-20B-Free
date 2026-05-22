@@ -54,6 +54,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       if (reasoning) {
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ type: 'reasoning', text: reasoning })}\n\n`);
+        console.log(`[routes] received reasoning: ${reasoning.substring(0, 20)}`);
       }
 
       if (content) {
