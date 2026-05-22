@@ -33,10 +33,6 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
     if (content) {
       assistantContent += content;
     }
-    
-    if (reasoning) {
-      console.log(`[aiService] YIELD reasoning: ${reasoning.substring(0, 30)}`);
-    }
 
     yield { reasoning, content };
   }
@@ -45,11 +41,8 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
   const estimatedCost = estimateCost(model, promptTokens, completionTokens);
 
   if (userId) {
-    console.log(`[aiService] Final reasoning length: ${assistantReasoning.length}, content length: ${assistantContent.length}`);
     logAIUsage(userId, model, promptTokens, completionTokens, estimatedCost).catch(err =>
       console.error('Async logging error:', err)
     );
   }
-
-  console.log(`📊 Usage: prompt=${promptTokens}, completion=${completionTokens}, cost=$${estimatedCost.toFixed(6)}`);
 }

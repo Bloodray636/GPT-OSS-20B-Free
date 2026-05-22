@@ -8,10 +8,6 @@ export const getUserSettings = async (userId) => {
     .eq('user_id', userId)
     .single();
 
-  if (error && error.code !== 'PGRST116') {
-    throw error;
-  }
-
   return {
     theme: data?.theme || 'dark',
     saveHistory: data?.save_history !== false,
@@ -32,9 +28,6 @@ export const saveUserSettings = async (userId, theme, saveHistory) => {
       }
     );
 
-  if (error) {
-    throw error;
-  }
 };
 
 // Чаты
@@ -47,10 +40,6 @@ export const getChats = async (userId) => {
       ascending: false 
     });
 
-  if (error){
-    throw error;
-  }
-
   return data;
 };
 
@@ -61,10 +50,6 @@ export const getChatById = async (chatId, userId) => {
     .eq('id', chatId)
     .eq('user_id', userId)
     .single();
-
-  if (error){
-    return null;
-  }
 
   const { data: messages } = await supabase
     .from('messages')
@@ -134,9 +119,27 @@ export async function logAIUsage(userId, model, promptTokens, completionTokens, 
       completion_tokens: completionTokens,
       total_tokens: totalTokens,
       estimated_cost: estimatedCost,
-    });
+  });
+}
 
-  if (error) {
-    console.error('Failed to log AI usage:', error);
-  }
+export async function saveChatSummary(chatId, summaryText) {
+  const { error } = await supabase
+    .from('chat_summaries')
+    .insert({ chat_id: chatId, summary_text: summaryText });
+}
+
+export async function getChatSummaries(chatId, limit = 3) {
+  const { data, error } = await supabase
+    .from('chat_summaries')
+    .select('summary_text')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  return data.map(row => row.summary_text);
+}
+
+export async function getChatLastSummary(chatId) {
+  const summaries = await getChatSummaries(chatId, 1);
+  return summaries.length ? summaries[0] : null;
 }
