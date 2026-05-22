@@ -32,13 +32,13 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
 
     if (content) {
       assistantContent += content;
-      
-      if (reasoning) {
-        console.log(`[aiService] YIELD reasoning: ${reasoning.substring(0, 30)}`);
-      }
-
-      yield { reasoning, content };
     }
+    
+    if (reasoning) {
+      console.log(`[aiService] YIELD reasoning: ${reasoning.substring(0, 30)}`);
+    }
+
+    yield { reasoning, content };
   }
 
   const completionTokens = countTokens(assistantContent + assistantReasoning);
