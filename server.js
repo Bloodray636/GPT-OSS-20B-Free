@@ -18,6 +18,9 @@ app.use(helmet());
 // Health check
 app.use('/health', healthRoutes);
 
+// Proxy
+app.set('trust proxy', 1);
+
 // Rate limiting
 app.use(limiter);
 app.use('/api/auth/login', authLimiter);
