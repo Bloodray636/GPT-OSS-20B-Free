@@ -23,15 +23,13 @@ export function addAssistantMessage(chat, assistantContent, assistantReasoning) 
   chat.messages.push({
     role: 'assistant',
     content: assistantContent,
-    reasoning: assistantReasoning,
+    reasoning: assistantReasoning,    // явное поле
   });
-
-  let titleUpdated = false;
 
   if (chat.title === 'Новый чат' && assistantContent.length > 10) {
     chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
-    titleUpdated = true;
+    return true;
   }
   
-  return titleUpdated;
+  return false;
 }
