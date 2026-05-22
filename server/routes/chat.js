@@ -66,6 +66,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     res.end();
 
     if (shouldSave) {
+      console.log(`Saving: content length=${assistantContent.length}, reasoning length=${assistantReasoning.length}`);
       addAssistantMessage(chat, assistantContent, assistantReasoning);
       await saveChat(chat, req.user.id);
     }

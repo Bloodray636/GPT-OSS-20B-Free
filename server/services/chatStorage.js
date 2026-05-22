@@ -20,6 +20,7 @@ export function addUserMessage(chat, content) {
 }
 
 export function addAssistantMessage(chat, assistantContent, assistantReasoning) {
+  console.log(`addAssistantMessage called with reasoning length: ${assistantReasoning.length}`);
   chat.messages.push({
     role: 'assistant',
     content: assistantContent,
@@ -30,6 +31,6 @@ export function addAssistantMessage(chat, assistantContent, assistantReasoning) 
     chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
     return true;
   }
-  
+
   return false;
 }
