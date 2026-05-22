@@ -32,7 +32,11 @@ export async function* streamAIResponse(messages, reasoningEffort = 'medium', si
 
     if (content) {
       assistantContent += content;
-      if (reasoning) console.log(`[aiService] yielding reasoning chunk: ${reasoning.substring(0, 20)}`);
+      
+      if (reasoning) {
+        console.log(`[aiService] YIELD reasoning: ${reasoning.substring(0, 30)}`);
+      }
+
       yield { reasoning, content };
     }
   }

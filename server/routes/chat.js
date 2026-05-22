@@ -52,9 +52,9 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       if (!streamStarted) streamStarted = true;
 
       if (reasoning) {
+        console.log(`[routes] RECEIVED reasoning: ${reasoning.substring(0, 30)}`);
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ type: 'reasoning', text: reasoning })}\n\n`);
-        console.log(`[routes] received reasoning: ${reasoning.substring(0, 20)}`);
       }
 
       if (content) {
@@ -63,6 +63,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       }
     }
 
+    console.log(`[routes] Final assistantReasoning length: ${assistantReasoning.length}`);
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     res.end();
 

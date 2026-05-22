@@ -37,7 +37,11 @@ export class NvidiaProvider extends AIProvider {
 
     for await (const chunk of completion) {
       const { reasoning, content } = normalizeNvidiaChunk(chunk);
-      if (reasoning) console.log(`[nvidia] reasoning chunk: ${reasoning.substring(0, 50)}`);
+      
+      if (reasoning) {
+        console.log(`[nvidia] YIELD reasoning: ${reasoning.substring(0, 30)}`);
+      }
+
       yield { reasoning, content };
     }
   }
