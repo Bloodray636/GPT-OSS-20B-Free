@@ -35,4 +35,19 @@ router.post('/', authenticate, validate(settingsSchema), async (req, res) => {
   }
 });
 
+router.get('/usage', authenticate, async (req, res) => {
+  const { data, error } = await supabase
+    .from('ai_usage_logs')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json(data);
+});
+
 export default router;

@@ -121,3 +121,22 @@ export const deleteChat = async (chatId, userId) => {
     .eq('id', chatId)
     .eq('user_id', userId);
 };
+
+export async function logAIUsage(userId, model, promptTokens, completionTokens, estimatedCost) {
+  const totalTokens = promptTokens + completionTokens;
+
+  const { error } = await supabase
+    .from('ai_usage_logs')
+    .insert({
+      user_id: userId,
+      model,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      estimated_cost: estimatedCost,
+    });
+
+  if (error) {
+    console.error('Failed to log AI usage:', error);
+  }
+}

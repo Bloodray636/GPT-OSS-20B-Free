@@ -46,7 +46,9 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     let assistantContent = '';
     let assistantReasoning = '';
 
-    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal)) {
+    const userId = req.user.id;
+
+    for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, userId, abortController.signal)) {
       if (!streamStarted) streamStarted = true;
 
       if (reasoning) {
