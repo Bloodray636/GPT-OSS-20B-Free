@@ -7,7 +7,7 @@ import { logAIUsage } from '../db.js';
 const PROVIDER = process.env.AI_PROVIDER || 'nvidia';
 const aiProvider = getAIProvider(PROVIDER);
 
-export async function* streamAIResponse(messages, reasoningEffort = null, signal = null, userId = null, model = null) {
+export async function* streamAIResponse(messages, reasoningEffort = "medium", signal = null, userId = null, model = null) {
   // Базовые параметры
   const baseParams = getAIParameters();
   const finalModel = model || baseParams.model;
