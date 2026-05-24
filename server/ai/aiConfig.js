@@ -40,13 +40,10 @@ export const AI_CONFIG = {
 
 // Текущие параметры
 export function getAIParameters() {
-  // Добавьте логирование для диагностики
-  console.log('[aiConfig] activePreset value:', AI_CONFIG.activePreset, 'type:', typeof AI_CONFIG.activePreset);
-  
-  // Гарантированный fallback
+
   let preset = PRESETS[AI_CONFIG.activePreset];
+
   if (!preset) {
-    console.warn(`[aiConfig] Preset "${AI_CONFIG.activePreset}" not found, using "balanced"`);
     preset = PRESETS.balanced;
   }
   

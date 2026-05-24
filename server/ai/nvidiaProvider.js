@@ -17,15 +17,6 @@ export class NvidiaProvider extends AIProvider {
       top_p = 1,
     } = options;
 
-    console.log('[nvidiaProvider] 🚀 Creating completion with:', {
-      model,
-      messagesCount: messages.length,
-      max_tokens,
-      temperature,
-      top_p,
-      reasoning_effort
-    });
-
     const completion = await this.client.chat.completions.create(
       {
         model,

@@ -19,10 +19,6 @@ export async function* streamAIResponse(
   const finalModel = model || baseParams.model;
   const finalReasoningEffort = reasoningEffort || baseParams.reasoning_effort;
 
-  console.log('[aiService] 📦 Base params:', JSON.stringify(baseParams));
-  console.log('[aiService] 🔧 Final model:', finalModel);
-  console.log('[aiService] 🧠 Final reasoning effort:', finalReasoningEffort);
-
   const fullPrompt = messages.map((m) => `${m.role}: ${m.content}`).join('\n');
   const promptTokens = countTokens(fullPrompt);
 
@@ -57,8 +53,4 @@ export async function* streamAIResponse(
       console.error('Async logging error:', err)
     );
   }
-
-  console.log(
-    `📊 Usage: model=${finalModel}, prompt=${promptTokens}, completion=${completionTokens}, cost=$${estimatedCost.toFixed(6)}`
-  );
 }
