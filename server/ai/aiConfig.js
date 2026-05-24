@@ -1,20 +1,20 @@
 export const PRESETS = {
-  fast: {
-    name: 'Быстрый',
-    model: 'deepseek-ai/deepseek-v4-flash',
-    max_tokens: 1024,
-    temperature: 0.7,
-    reasoning_effort: 'low',
-    top_p: 0.9,
-  },
-  balanced: {
-    name: 'Сбалансированный',
-    model: 'deepseek-ai/deepseek-v3.2',
-    max_tokens: 2048,
-    temperature: 0.8,
-    reasoning_effort: 'medium',
-    top_p: 0.95,
-  },
+//   fast: {
+//     name: 'Быстрый',
+//     model: 'deepseek-ai/deepseek-v4-flash',
+//     max_tokens: 1024,
+//     temperature: 0.7,
+//     reasoning_effort: 'low',
+//     top_p: 0.9,
+//   },
+//   balanced: {
+//     name: 'Сбалансированный',
+//     model: 'deepseek-ai/deepseek-v3.2',
+//     max_tokens: 2048,
+//     temperature: 0.8,
+//     reasoning_effort: 'medium',
+//     top_p: 0.95,
+//   },
   quality: {
     name: 'Качественный',
     model: 'openai/gpt-oss-120b',
