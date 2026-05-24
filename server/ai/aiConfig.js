@@ -40,24 +40,23 @@ export const AI_CONFIG = {
 
 // Текущие параметры
 export function getAIParameters() {
-  const preset = PRESETS[AI_CONFIG.activePreset] || PRESETS.balanced;
-
+  // Добавьте логирование для диагностики
+  console.log('[aiConfig] activePreset value:', AI_CONFIG.activePreset, 'type:', typeof AI_CONFIG.activePreset);
+  
+  // Гарантированный fallback
+  let preset = PRESETS[AI_CONFIG.activePreset];
+  if (!preset) {
+    console.warn(`[aiConfig] Preset "${AI_CONFIG.activePreset}" not found, using "balanced"`);
+    preset = PRESETS.balanced;
+  }
+  
   return {
-    model: AI_CONFIG.model || preset.model,
+    model: AI_CONFIG.model !== null ? AI_CONFIG.model : preset.model,
     max_tokens: AI_CONFIG.max_tokens !== null ? AI_CONFIG.max_tokens : preset.max_tokens,
     temperature: AI_CONFIG.temperature !== null ? AI_CONFIG.temperature : preset.temperature,
-    reasoning_effort: AI_CONFIG.reasoning_effort || preset.reasoning_effort,
+    reasoning_effort: AI_CONFIG.reasoning_effort !== null ? AI_CONFIG.reasoning_effort : preset.reasoning_effort,
     top_p: AI_CONFIG.top_p !== null ? AI_CONFIG.top_p : preset.top_p,
   };
-
-  console.log('[aiConfig] 🎛️ Active preset:', AI_CONFIG.activePreset);
-    console.log('[aiConfig] 📋 Raw config:', {
-    model: AI_CONFIG.model,
-    max_tokens: AI_CONFIG.max_tokens,
-    temperature: AI_CONFIG.temperature,
-    reasoning_effort: AI_CONFIG.reasoning_effort,
-    top_p: AI_CONFIG.top_p
-    });
 }
 
 // Обновление конфигурации
