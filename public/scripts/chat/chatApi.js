@@ -58,7 +58,7 @@ export const deleteChatConfirm = (chatId) => {
         if (state.chats.length) {
             await openChat(state.chats[0].id);
         } else {
-            await createNewChat();
+            await createNewChat(); 
         }
       }
     } else {
