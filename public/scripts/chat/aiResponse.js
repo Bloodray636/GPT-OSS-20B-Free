@@ -1,7 +1,7 @@
 import { authToken, state, DOM } from './config.js';
 import { showInfoModal } from './modals.js';
 import { updateReasoning, updateContent } from './streamHandlers.js';
-import { createStreamingAssistantContainer } from './messageRenderer.js';
+import { createStreamingAssistantContainer, appendMessageToDOM } from './messageRenderer.js';
 import { loadChats } from './chatManagement.js';
 import { clearDraftForChat } from './draft.js';
 
