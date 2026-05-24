@@ -28,7 +28,7 @@ export const PRESETS = {
 // Конфигурация по умолчанию
 export const AI_CONFIG = {
   // Активный пресет
-  activePreset: process.env.AI_PRESET || 'balanced',
+  activePreset: process.env.AI_PRESET || 'quality',
 
   // Индивидуальные параметры
   model: process.env.AI_MODEL || null,
