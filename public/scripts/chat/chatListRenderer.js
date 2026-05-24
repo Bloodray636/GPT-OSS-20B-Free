@@ -1,6 +1,7 @@
 import { DOM, state } from './config.js';
 import { showRenameModal } from './modals.js';
-import { deleteChatConfirm } from './chatActions.js';
+import { deleteChatConfirm } from './chatApi.js'; 
+import { openChat } from './chatActions.js';
 
 export const renderChatList = () => {
   DOM.chatList.innerHTML = '';
