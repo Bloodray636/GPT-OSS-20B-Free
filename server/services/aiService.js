@@ -27,6 +27,8 @@ export async function* streamAIResponse(messages, reasoningEffort = "medium", si
     top_p: baseParams.top_p,
   };
 
+  console.log('Options before streamCompletion:', options);
+
   const stream = aiProvider.streamCompletion(messages, options, signal);
 
   for await (const { reasoning, content } of stream) {

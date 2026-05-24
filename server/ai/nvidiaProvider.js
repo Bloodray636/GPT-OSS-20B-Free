@@ -10,7 +10,7 @@ export class NvidiaProvider extends AIProvider {
 
   async *streamCompletion(messages, options = {}, signal = null) {
     const {
-      model = 'openai/gpt-oss-120b',
+      model = 'openai/gpt-oss-120b', 
       reasoning_effort = 'medium',
       max_tokens = 4096,
       temperature = 1,
