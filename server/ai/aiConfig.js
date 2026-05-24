@@ -49,6 +49,15 @@ export function getAIParameters() {
     reasoning_effort: AI_CONFIG.reasoning_effort || preset.reasoning_effort,
     top_p: AI_CONFIG.top_p !== null ? AI_CONFIG.top_p : preset.top_p,
   };
+
+  console.log('[aiConfig] 🎛️ Active preset:', AI_CONFIG.activePreset);
+    console.log('[aiConfig] 📋 Raw config:', {
+    model: AI_CONFIG.model,
+    max_tokens: AI_CONFIG.max_tokens,
+    temperature: AI_CONFIG.temperature,
+    reasoning_effort: AI_CONFIG.reasoning_effort,
+    top_p: AI_CONFIG.top_p
+    });
 }
 
 // Обновление конфигурации

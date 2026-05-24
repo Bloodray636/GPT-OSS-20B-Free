@@ -10,6 +10,16 @@ const aiProvider = getAIProvider(PROVIDER);
 export async function* streamAIResponse(messages, reasoningEffort = "medium", signal = null, userId = null, model = null) {
   // Базовые параметры
   const baseParams = getAIParameters();
+
+  console.log('[aiService] 📦 Base params:', JSON.stringify(baseParams));
+  console.log('[aiService] 🔧 Final options:', JSON.stringify({
+    model: finalModel,
+    reasoning_effort: finalReasoningEffort,
+    max_tokens: baseParams.max_tokens,
+    temperature: baseParams.temperature,
+    top_p: baseParams.top_p
+  }));
+
   const finalModel = model || baseParams.model;
   const finalReasoningEffort = reasoningEffort || baseParams.reasoning_effort;
 
@@ -28,6 +38,8 @@ export async function* streamAIResponse(messages, reasoningEffort = "medium", si
   };
 
   console.log('Options before streamCompletion:', options);
+
+  console.log('[aiService] ⏳ Creating stream...');
 
   const stream = aiProvider.streamCompletion(messages, options, signal);
 

@@ -13,6 +13,13 @@ const router = express.Router();
 router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => {
   const { chatId, newMessage, reasoning_effort } = req.body;
 
+  console.log('[routes] 📥 Request received:', {
+    chatId: chatId,
+    newMessageLength: newMessage?.length,
+    reasoning_effort: reasoning_effort,
+    userId: req.user?.id
+  });
+
   const settings = await getUserSettings(req.user.id);
   const shouldSave = settings.saveHistory;
 
@@ -68,6 +75,8 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
 
     const userId = req.user.id;
 
+    console.log('[routes] 🚀 Calling streamAIResponse with', openAiMessages.length, 'messages');
+
     for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal, userId)) {
       if (!streamStarted){
         streamStarted = true;
@@ -98,6 +107,12 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
       await saveChat(chat, req.user.id);
     }
   } catch (err) {
+    console.error('[routes] ❌ Error details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name
+    });
+
     if (err.name === 'AbortError') {
 
       if (!res.headersSent && !res.destroyed){
