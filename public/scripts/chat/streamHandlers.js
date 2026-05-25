@@ -29,7 +29,7 @@ export const updateReasoning = (text) => {
       header.appendChild(label);
 
       reasoningDiv.classList.add('reasoning-block');
-      reasoningDiv.classList.remove('expanded'); // свёрнут по умолчанию
+      reasoningDiv.classList.remove('expanded');
       reasoningDiv.style.maxHeight = '0';
 
       wrapper.appendChild(header);
@@ -61,7 +61,7 @@ export const updateReasoning = (text) => {
     }
 
     reasoningDiv.innerHTML += escapeHtml(text);
-    
+
     scrollToBottom();
   }
 };

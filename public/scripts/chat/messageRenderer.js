@@ -116,11 +116,12 @@ export const createStreamingAssistantContainer = () => {
 
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
-  reasoningBlock.style.display = 'none';
+  reasoningBlock.style.maxHeight = '0';
 
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
+
   assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
   DOM.chatContainer.appendChild(assistantDiv);
