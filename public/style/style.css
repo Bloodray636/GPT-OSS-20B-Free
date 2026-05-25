@@ -1333,3 +1333,39 @@ pre {
   margin-right: 6px;
   fill: var(--danger);
 }
+
+.reasoning-wrapper {
+  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  background: var(--reasoning-bg);
+  overflow: hidden;
+}
+
+.reasoning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  user-select: none;
+  background: var(--reasoning-bg);
+  border-radius: 12px 12px 0 0;
+  transition: background 0.2s;
+}
+
+.reasoning-header:hover {
+  background: var(--bg-hover);
+  opacity: 0.8;
+}
+
+.reasoning-toggle {
+  font-size: 0.8rem;
+  font-weight: normal;
+  transition: transform 0.2s;
+}
+
+.reasoning-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--reasoning-border);
+}

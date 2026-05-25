@@ -39,7 +39,14 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     assistantDiv.className = 'message assistant';
 
     const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
-    const reasoningHtml = reasoning ? `<div class="reasoning-block">${escapeHtml(reasoning)}</div>` : '';
+    const reasoningHtml = reasoning ? `
+      <div class="reasoning-wrapper">
+        <div class="reasoning-header" data-collapsed="true">
+          <span class="reasoning-toggle">▶</span> <span class="reasoning-label">🧠 Рассуждения</span>
+        </div>
+        <div class="reasoning-block" style="display: none;">${escapeHtml(reasoning)}</div>
+      </div>
+    ` : '';
 
     assistantDiv.innerHTML = `
       ${reasoningHtml}
@@ -50,6 +57,24 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
         </svg>
       </div>
     `;
+
+    if (reasoning) {
+      const header = assistantDiv.querySelector('.reasoning-header');
+      const block = assistantDiv.querySelector('.reasoning-block');
+      
+      header.addEventListener('click', () => {
+        const isCollapsed = header.dataset.collapsed === 'true';
+        if (isCollapsed) {
+          block.style.display = 'block';
+          header.dataset.collapsed = 'false';
+          header.querySelector('.reasoning-toggle').textContent = '▼';
+        } else {
+          block.style.display = 'none';
+          header.dataset.collapsed = 'true';
+          header.querySelector('.reasoning-toggle').textContent = '▶';
+        }
+      });
+    }
 
     DOM.chatContainer.appendChild(assistantDiv);
 

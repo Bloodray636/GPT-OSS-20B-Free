@@ -39,9 +39,11 @@ export async function* streamAIResponse(
     if (reasoning) {
       assistantReasoning += reasoning;
     }
+    
     if (content) {
       assistantContent += content;
     }
+
     yield { reasoning, content };
   }
 
