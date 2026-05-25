@@ -29,10 +29,11 @@ export const updateReasoning = (text) => {
       header.appendChild(label);
 
       reasoningDiv.classList.add('reasoning-block');
-      reasoningDiv.style.display = 'none';
+      reasoningDiv.classList.remove('expanded'); // свёрнут по умолчанию
+      reasoningDiv.style.maxHeight = '0';
+
       wrapper.appendChild(header);
       wrapper.appendChild(reasoningDiv);
-
       reasoningDiv.parentNode.replaceChild(wrapper, reasoningDiv);
       state.streamingData.reasoningDiv = reasoningDiv;
 
@@ -40,7 +41,7 @@ export const updateReasoning = (text) => {
         const isCollapsed = header.dataset.collapsed === 'true';
 
         if (isCollapsed) {
-          reasoningDiv.style.display = 'block';
+          reasoningDiv.classList.add('expanded');
           header.dataset.collapsed = 'false';
           toggleIcon.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -48,7 +49,7 @@ export const updateReasoning = (text) => {
             </svg>
           `;
         } else {
-          reasoningDiv.style.display = 'none';
+          reasoningDiv.classList.remove('expanded');
           header.dataset.collapsed = 'true';
           toggleIcon.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -59,8 +60,8 @@ export const updateReasoning = (text) => {
       });
     }
 
-    state.streamingData.reasoningDiv.innerHTML += escapeHtml(text);
-
+    reasoningDiv.innerHTML += escapeHtml(text);
+    
     scrollToBottom();
   }
 };

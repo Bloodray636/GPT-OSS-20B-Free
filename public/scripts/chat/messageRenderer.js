@@ -70,25 +70,23 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
 
       const block = document.createElement('div');
       block.className = 'reasoning-block';
-      block.style.display = 'none';
       block.innerText = reasoning;
 
       wrapper.appendChild(header);
       wrapper.appendChild(block);
-
-      assistantDiv.insertBefore(wrapper, assistantDiv.firstChild);
+      assistantDiv.appendChild(wrapper);
 
       header.addEventListener('click', () => {
         const isCollapsed = header.dataset.collapsed === 'true';
 
         if (isCollapsed) {
-          block.style.display = 'block';
+          block.classList.add('expanded');
           header.dataset.collapsed = 'false';
           toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
             <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
           </svg>`;
         } else {
-          block.style.display = 'none';
+          block.classList.remove('expanded');
           header.dataset.collapsed = 'true';
           toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
             <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
@@ -108,7 +106,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
 
     attachCopyToCodeBlocks(assistantDiv);
   }
-  
+
   scrollToBottom();
 };
 

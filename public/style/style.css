@@ -321,22 +321,17 @@ input:focus, textarea:focus {
   font-size: 0.8rem;
   color: var(--reasoning-text);
   white-space: pre-wrap;
-  transition: all 0.3s ease-in-out;
+  transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, padding 0.2s ease-in-out;
   overflow: hidden;
-}
-.reasoning-block[style*="display: none"] {
-  display: block;
-  max-height: 0;
-  padding: 0 1rem;
   opacity: 0;
-  visibility: hidden;
+  max-height: 0;
 }
-.reasoning-block[style*="display: block"] {
+.reasoning-block.expanded {
   max-height: 1000px; /* Достаточно большое значение */
   padding: 0.7rem 1rem;
   opacity: 1;
-  visibility: visible;
 }
+
 .reasoning-block::before {
   content: "Рассуждения";
   font-weight: 600;
@@ -1370,7 +1365,6 @@ pre {
 
 .reasoning-header:hover {
   background: var(--bg-hover);
-  opacity: 0.8;
 }
 
 .reasoning-toggle {
