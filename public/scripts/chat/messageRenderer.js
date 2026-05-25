@@ -27,9 +27,8 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     const copyBtn = userDiv.querySelector('.copy-user-btn');
 
     copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(content).then(() => {
-        showInfoModal('Успех', 'Сообщение скопировано');
-      }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать сообщение'));
+      navigator.clipboard.writeText(content).then(() => showInfoModal('Успех', 'Сообщение скопировано'))
+        .catch(() => showInfoModal('Ошибка', 'Не удалось скопировать сообщение'));
     });
 
     const editIcon = userDiv.querySelector('.edit-icon');
@@ -39,17 +38,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     assistantDiv.className = 'message assistant';
 
     const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
-    const reasoningHtml = reasoning ? `
-      <div class="reasoning-wrapper">
-        <div class="reasoning-header" data-collapsed="true">
-          <span class="reasoning-toggle">▶</span> <span class="reasoning-label">🧠 Рассуждения</span>
-        </div>
-        <div class="reasoning-block" style="display: none;">${escapeHtml(reasoning)}</div>
-      </div>
-    ` : '';
-
     assistantDiv.innerHTML = `
-      ${reasoningHtml}
       <div class="content-block">${formatted}</div>
       <div class="copy-response-btn" title="Копировать">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -66,7 +55,6 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
       header.className = 'reasoning-header';
       header.dataset.collapsed = 'true';
 
-      // SVG для свёрнутого состояния
       const toggleIcon = document.createElement('span');
       toggleIcon.className = 'reasoning-toggle';
       toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -87,26 +75,24 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
 
       wrapper.appendChild(header);
       wrapper.appendChild(block);
-      assistantDiv.appendChild(wrapper);
+
+      assistantDiv.insertBefore(wrapper, assistantDiv.firstChild);
 
       header.addEventListener('click', () => {
         const isCollapsed = header.dataset.collapsed === 'true';
+
         if (isCollapsed) {
           block.style.display = 'block';
           header.dataset.collapsed = 'false';
-          toggleIcon.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
-            </svg>
-          `;
+          toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
+          </svg>`;
         } else {
           block.style.display = 'none';
           header.dataset.collapsed = 'true';
-          toggleIcon.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
-            </svg>
-          `;
+          toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+          </svg>`;
         }
       });
     }
@@ -116,13 +102,13 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     const copyBtn = assistantDiv.querySelector('.copy-response-btn');
 
     copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(content).then(() => {
-        showInfoModal('Успех', 'Ответ скопирован');
-      }).catch(() => showInfoModal('Ошибка', 'Не удалось скопировать ответ'));
+      navigator.clipboard.writeText(content).then(() => showInfoModal('Успех', 'Ответ скопирован'))
+        .catch(() => showInfoModal('Ошибка', 'Не удалось скопировать ответ'));
     });
 
     attachCopyToCodeBlocks(assistantDiv);
   }
+  
   scrollToBottom();
 };
 
