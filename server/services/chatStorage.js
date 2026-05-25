@@ -2,15 +2,15 @@ import { getChatById, saveChat } from '../db.js';
 import { generateSummary, estimateTokens } from '../summarizer.js';
 import { saveChatSummary, getChatLastSummary } from '../db.js';
 
-const TOKEN_LIMIT = 10000; // Максимальное количество токенов
-const SUMMARY_TRIGGER = 8000; // Лимит
+const TOKEN_LIMIT = 10000;
+const SUMMARY_TRIGGER = 8000;
 
 export async function compressChatIfNeeded(chat, userId) {
   const messages = chat.messages.map(msg => ({ role: msg.role, content: msg.content }));
   let totalTokens = estimateTokens(messages);
 
   if (totalTokens <= SUMMARY_TRIGGER) {
-    return false;
+    return false; 
   }
 
   // Суммирование старых сообщений
