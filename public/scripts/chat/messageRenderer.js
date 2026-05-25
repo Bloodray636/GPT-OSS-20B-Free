@@ -1,3 +1,5 @@
+// public/scripts/chat/messageRenderer.js
+
 import { DOM } from './config.js';
 import { escapeHtml, scrollToBottom } from './utils.js';
 import { showEditModal, showInfoModal } from './modals.js';
@@ -7,7 +9,6 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
   if (role === 'user') {
     const userDiv = document.createElement('div');
     userDiv.className = 'message user';
-
     userDiv.innerHTML = `
       <div class="bubble">${escapeHtml(content)}</div>
       <div class="copy-user-btn" title="Копировать">
@@ -21,7 +22,7 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
         </svg>
       </span>
     `;
-
+    
     DOM.chatContainer.appendChild(userDiv);
 
     const copyBtn = userDiv.querySelector('.copy-user-btn');
@@ -33,19 +34,10 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
 
     const editIcon = userDiv.querySelector('.edit-icon');
     editIcon.addEventListener('click', () => showEditModal(userDiv, content));
-  } else if (role === 'assistant') {
+  } 
+  else if (role === 'assistant') {
     const assistantDiv = document.createElement('div');
     assistantDiv.className = 'message assistant';
-
-    const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
-    assistantDiv.innerHTML = `
-      <div class="content-block">${formatted}</div>
-      <div class="copy-response-btn" title="Копировать">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
-        </svg>
-      </div>
-    `;
 
     if (reasoning) {
       const wrapper = document.createElement('div');
@@ -95,14 +87,28 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
       });
     }
 
-    DOM.chatContainer.appendChild(assistantDiv);
+    const contentBlock = document.createElement('div');
+    contentBlock.className = 'content-block';
 
-    const copyBtn = assistantDiv.querySelector('.copy-response-btn');
+    const formatted = typeof marked !== 'undefined' ? marked.parse(content, { async: false }) : escapeHtml(content);
+    contentBlock.innerHTML = formatted;
+    assistantDiv.appendChild(contentBlock);
+
+    const copyBtn = document.createElement('div');
+    copyBtn.className = 'copy-response-btn';
+    copyBtn.title = 'Копировать';
+    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
+    </svg>`;
+
+    assistantDiv.appendChild(copyBtn);
 
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(content).then(() => showInfoModal('Успех', 'Ответ скопирован'))
         .catch(() => showInfoModal('Ошибка', 'Не удалось скопировать ответ'));
     });
+
+    DOM.chatContainer.appendChild(assistantDiv);
 
     attachCopyToCodeBlocks(assistantDiv);
   }
@@ -127,6 +133,9 @@ export const createStreamingAssistantContainer = () => {
   DOM.chatContainer.appendChild(assistantDiv);
 
   scrollToBottom();
-  
-  return { reasoningBlock, contentBlock };
+
+  return { 
+    reasoningBlock, 
+    contentBlock 
+  };
 };
