@@ -4,40 +4,63 @@ import { attachCopyToCodeBlocks } from './copyCode.js';
 
 export const updateReasoning = (text) => {
   if (state.streamingData.reasoningDiv) {
-    if (!state.streamingData.reasoningDiv.parentElement.querySelector('.reasoning-header')) {
+    const reasoningDiv = state.streamingData.reasoningDiv;
+
+    if (!reasoningDiv.parentElement.classList?.contains('reasoning-wrapper')) {
       const wrapper = document.createElement('div');
       wrapper.className = 'reasoning-wrapper';
 
       const header = document.createElement('div');
       header.className = 'reasoning-header';
       header.dataset.collapsed = 'true';
-      header.innerHTML = '<span class="reasoning-toggle">▶</span> <span class="reasoning-label">🧠 Рассуждения</span>';
 
-      const block = state.streamingData.reasoningDiv;
-      block.classList.add('reasoning-block');
-      block.style.display = 'none';
+      const toggleIcon = document.createElement('span');
+      toggleIcon.className = 'reasoning-toggle';
+      toggleIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+        </svg>
+      `;
+
+      const label = document.createElement('span');
+      label.className = 'reasoning-label';
+      label.textContent = '🧠 Рассуждения';
+      header.appendChild(toggleIcon);
+      header.appendChild(label);
+
+      reasoningDiv.classList.add('reasoning-block');
+      reasoningDiv.style.display = 'none';
       wrapper.appendChild(header);
-      wrapper.appendChild(block);
-      state.streamingData.reasoningDiv.parentNode.replaceChild(wrapper, block);
-      state.streamingData.reasoningDiv = block;
-      
+      wrapper.appendChild(reasoningDiv);
+
+      reasoningDiv.parentNode.replaceChild(wrapper, reasoningDiv);
+      state.streamingData.reasoningDiv = reasoningDiv;
+
       header.addEventListener('click', () => {
         const isCollapsed = header.dataset.collapsed === 'true';
 
         if (isCollapsed) {
-          block.style.display = 'block';
+          reasoningDiv.style.display = 'block';
           header.dataset.collapsed = 'false';
-          header.querySelector('.reasoning-toggle').textContent = '▼';
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
+            </svg>
+          `;
         } else {
-          block.style.display = 'none';
+          reasoningDiv.style.display = 'none';
           header.dataset.collapsed = 'true';
-          header.querySelector('.reasoning-toggle').textContent = '▶';
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+            </svg>
+          `;
         }
       });
     }
 
     state.streamingData.reasoningDiv.innerHTML += escapeHtml(text);
-    
+
     scrollToBottom();
   }
 };

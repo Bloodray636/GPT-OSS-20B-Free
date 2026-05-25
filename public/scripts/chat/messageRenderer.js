@@ -59,19 +59,54 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     `;
 
     if (reasoning) {
-      const header = assistantDiv.querySelector('.reasoning-header');
-      const block = assistantDiv.querySelector('.reasoning-block');
-      
+      const wrapper = document.createElement('div');
+      wrapper.className = 'reasoning-wrapper';
+
+      const header = document.createElement('div');
+      header.className = 'reasoning-header';
+      header.dataset.collapsed = 'true';
+
+      // SVG для свёрнутого состояния
+      const toggleIcon = document.createElement('span');
+      toggleIcon.className = 'reasoning-toggle';
+      toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+      </svg>`;
+
+      const label = document.createElement('span');
+      label.className = 'reasoning-label';
+      label.textContent = '🧠 Рассуждения';
+
+      header.appendChild(toggleIcon);
+      header.appendChild(label);
+
+      const block = document.createElement('div');
+      block.className = 'reasoning-block';
+      block.style.display = 'none';
+      block.innerText = reasoning;
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(block);
+      assistantDiv.appendChild(wrapper);
+
       header.addEventListener('click', () => {
         const isCollapsed = header.dataset.collapsed === 'true';
         if (isCollapsed) {
           block.style.display = 'block';
           header.dataset.collapsed = 'false';
-          header.querySelector('.reasoning-toggle').textContent = '▼';
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
+            </svg>
+          `;
         } else {
           block.style.display = 'none';
           header.dataset.collapsed = 'true';
-          header.querySelector('.reasoning-toggle').textContent = '▶';
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+            </svg>
+          `;
         }
       });
     }

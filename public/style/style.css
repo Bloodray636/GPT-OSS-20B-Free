@@ -321,6 +321,21 @@ input:focus, textarea:focus {
   font-size: 0.8rem;
   color: var(--reasoning-text);
   white-space: pre-wrap;
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+.reasoning-block[style*="display: none"] {
+  display: block;
+  max-height: 0;
+  padding: 0 1rem;
+  opacity: 0;
+  visibility: hidden;
+}
+.reasoning-block[style*="display: block"] {
+  max-height: 1000px; /* Достаточно большое значение */
+  padding: 0.7rem 1rem;
+  opacity: 1;
+  visibility: visible;
 }
 .reasoning-block::before {
   content: "Рассуждения";
@@ -1345,11 +1360,11 @@ pre {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.8rem;
   cursor: pointer;
   user-select: none;
   background: var(--reasoning-bg);
-  border-radius: 12px 12px 0 0;
+  border-radius: 12px;
+  padding: 0.5rem 0.8rem;
   transition: background 0.2s;
 }
 
@@ -1361,6 +1376,14 @@ pre {
 .reasoning-toggle {
   font-size: 0.8rem;
   font-weight: normal;
+  transition: transform 0.2s;
+}
+
+.reasoning-toggle svg {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  stroke: var(--reasoning-border);
   transition: transform 0.2s;
 }
 
