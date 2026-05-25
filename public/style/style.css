@@ -314,9 +314,9 @@ input:focus, textarea:focus {
 }
 .reasoning-block {
   background: var(--reasoning-bg);
-  border-left: 4px solid var(--reasoning-border);
-  padding: 0.7rem 1rem;
-  margin-bottom: 0.5rem;
+  border-top: 4px solid var(--reasoning-border);
+  padding: 0;
+  margin-bottom: 0;
   border-radius: 18px;
   font-size: 0.8rem;
   color: var(--reasoning-text);
@@ -327,17 +327,12 @@ input:focus, textarea:focus {
   max-height: 0;
 }
 .reasoning-block.expanded {
-  max-height: 1000px; /* Достаточно большое значение */
+  max-height: 1000px;
   padding: 0.7rem 1rem;
+  margin-bottom: 0.5rem;
   opacity: 1;
 }
 
-.reasoning-block::before {
-  content: "Рассуждения";
-  font-weight: 600;
-  display: block;
-  margin-bottom: 0.3rem;
-}
 .edit-icon {
   position: absolute;
   bottom: -30px;
@@ -1385,4 +1380,10 @@ pre {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--reasoning-border);
+}
+
+.reasoning-label svg{
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
 }
