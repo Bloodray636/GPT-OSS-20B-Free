@@ -70,7 +70,6 @@ export function addAssistantMessage(chat, assistantContent, assistantReasoning) 
 }
 
 export async function updateChatTitleIfNeeded(chat, firstUserMessage, userId) {
-  console.log('[updateChatTitleIfNeeded] Called for chat', chat.id, 'title:', chat.title);
   if (chat.title !== 'Новый чат') {
     return false;
   }
@@ -84,20 +83,17 @@ export async function updateChatTitleIfNeeded(chat, firstUserMessage, userId) {
 
   try {
     newTitle = await titleGenerator.generateTitle(firstUserMessage);
-    console.log('[updateChatTitleIfNeeded] AI result:', newTitle);
   } catch (err) {
     console.error('Title generation error:', err);
   }
 
   if (!newTitle || newTitle.length < 3) {
     newTitle = titleGenerator.fallbackTitle(firstUserMessage);
-    console.log('[updateChatTitleIfNeeded] Using fallback:', newTitle);
   }
 
   if (newTitle && newTitle !== chat.title) {
     chat.title = newTitle;
     await saveChat(chat, userId);
-    console.log('[updateChatTitleIfNeeded] Title updated to:', newTitle);
     return true;
   }
 

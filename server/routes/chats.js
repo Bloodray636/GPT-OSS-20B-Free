@@ -43,8 +43,6 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 router.post('/', authenticate, validate(createChatSchema), async (req, res) => {
-  const { title } = req.body;
-
   const newChat = {
     id: Date.now().toString(),
     title: 'Новый чат',
@@ -59,6 +57,23 @@ router.post('/', authenticate, validate(createChatSchema), async (req, res) => {
     );
 
     res.json(newChat);
+  } catch (err) {
+    res.status(500).json({ 
+      error: err.message 
+    });
+  }
+});
+
+router.delete('/all', authenticate, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('chats')
+      .delete()
+      .eq('user_id', req.user.id);
+
+    if (error) throw error;
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ 
       error: err.message 
@@ -190,23 +205,6 @@ router.get('/:chatId', authenticate, validate(chatIdParamSchema, 'params'), asyn
     } 
 
     res.json(chat);
-  } catch (err) {
-    res.status(500).json({ 
-      error: err.message 
-    });
-  }
-});
-
-router.delete('/all', authenticate, async (req, res) => {
-  try {
-    const { error } = await supabase
-      .from('chats')
-      .delete()
-      .eq('user_id', req.user.id);
-
-    if (error) throw error;
-
-    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ 
       error: err.message 
