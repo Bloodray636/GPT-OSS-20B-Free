@@ -43,13 +43,13 @@ export class NvidiaProvider extends AIProvider {
 
   async createCompletion(messages, options = {}) {
     const {
-      model,
+      model = 'deepseek-ai/deepseek-v4-flash',
       max_tokens = 40,
       temperature = 0.2,
       top_p = 1,
     } = options;
 
-    const effectiveModel = model;
+    const effectiveModel = model || 'deepseek-ai/deepseek-v4-flash';
 
     try {
       const completion = await this.client.chat.completions.create({
