@@ -6,4 +6,4 @@ export class AIProvider {
   async createCompletion(messages, options = {}) {
     throw new Error('Not implemented');
   }
-}
+} 
