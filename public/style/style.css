@@ -659,7 +659,7 @@ input:focus, textarea:focus {
 
 @media (max-width: 768px) {
   .app{
-    height: 90vh;
+    height: 94vh;
   }
   .burger-menu {
     display: inline-block;
