@@ -88,7 +88,7 @@ export const generateNewResponse = async (userMessage) => {
         await loadChats();
         await openChat(state.currentChatId);
         titleUpdateScheduled = false;
-      }, 2500);
+      }, 5000);
     }
 
   } catch (err) {
@@ -126,7 +126,7 @@ export const stopGeneration = () => {
     state.streamingData.abortController.abort();
 
     updateContent('(генерация остановлена)');
-    
+
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';

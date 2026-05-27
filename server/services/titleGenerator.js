@@ -14,6 +14,8 @@ export class TitleGenerator {
         return null;
     }
 
+    console.log('[TitleGenerator] Generating for:', userMessage.slice(0, 60));
+
     const prompt = `Создай краткий заголовок для чата (максимум 5-6 слов) на русском, отражающий суть сообщения. Не используй кавычки, markdown, эмодзи. Верни только заголовок без пояснений.\n\nСообщение: "${userMessage}"\n\nЗаголовок:`;
 
     try {
@@ -21,14 +23,13 @@ export class TitleGenerator {
             role: 'user', 
             content: prompt 
         }],
-
         {
           model: TITLE_MODEL,
           max_tokens: 40,
           temperature: 0.2,
         }
       );
-
+      console.log('[TitleGenerator] Raw AI response:', raw);
       return this.cleanTitle(raw);
     } catch (err) {
       console.error('Title generation failed:', err);
@@ -46,6 +47,8 @@ export class TitleGenerator {
       .replace(/[\n\r]+/g, ' ')
       .replace(/\s+/g, ' ')  
       .trim();
+
+    console.log('[TitleGenerator] Cleaned title:', cleaned);
 
     // убираем кавычки
     cleaned = cleaned.replace(/^["']|["']$/g, '');
