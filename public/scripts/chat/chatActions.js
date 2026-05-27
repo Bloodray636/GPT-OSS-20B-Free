@@ -6,28 +6,6 @@ import { loadDraft } from './messageHandlers.js';
 import { renderChatList } from './chatListRenderer.js';
 import { loadChats } from './chatApi.js';
 
-export const createNewChat = async () => {
-  try {
-    const newChat = await fetchJSON('/api/chats', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ 
-            title: 'Новый чат' 
-        })
-    });
-
-    state.chats.unshift(newChat);
-    
-    renderChatList();
-
-    await openChat(newChat.id);
-  } catch {
-    showInfoModal('Ошибка', 'Не удалось создать чат');
-  }
-};
-
 export const openChat = async (chatId) => {
   if (state.streaming) {
     showInfoModal('Внимание', 'Дождитесь окончания ответа');
@@ -82,5 +60,27 @@ export const openChat = async (chatId) => {
     } else {
       await createNewChat();
     }
+  }
+};
+
+export const createNewChat = async () => {
+  try {
+    const newChat = await fetchJSON('/api/chats', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+            title: 'Новый чат' 
+        })
+    });
+
+    state.chats.unshift(newChat);
+    
+    renderChatList();
+
+    await openChat(newChat.id);
+  } catch {
+    showInfoModal('Ошибка', 'Не удалось создать чат');
   }
 };
