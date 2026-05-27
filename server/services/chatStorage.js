@@ -1,19 +1,21 @@
-import { getChatById, saveChat } from '../db.js';
+import { getChatById, saveChat, saveChatSummary } from '../db.js';
 import { generateSummary, estimateTokens } from '../summarizer.js';
-import { saveChatSummary, getChatLastSummary } from '../db.js';
 
 const TOKEN_LIMIT = 10000;
 const SUMMARY_TRIGGER = 8000;
 
 export async function compressChatIfNeeded(chat, userId) {
-  const messages = chat.messages.map(msg => ({ role: msg.role, content: msg.content }));
+  const messages = chat.messages.map(msg => ({
+    role: msg.role,
+    content: msg.content,
+  }));
+
   let totalTokens = estimateTokens(messages);
 
   if (totalTokens <= SUMMARY_TRIGGER) {
-    return false; 
+    return false;
   }
 
-  // Суммирование старых сообщений
   const splitIdx = Math.floor(messages.length * 0.7);
   const oldMessages = messages.slice(0, splitIdx);
   const recentMessages = messages.slice(splitIdx);
@@ -21,13 +23,16 @@ export async function compressChatIfNeeded(chat, userId) {
   const summary = await generateSummary(oldMessages);
   await saveChatSummary(chat.id, summary);
 
-  // Замена сообщений на один блок
   chat.messages = [
-    { role: 'system', content: `Краткое содержание предыдущего диалога:\n${summary}` },
-    ...recentMessages
+    { 
+      role: 'system', 
+      content: `Краткое содержание предыдущего диалога:\n${summary}` 
+    },
+    ...recentMessages,
   ];
 
   console.log(`[Summarizer] Чат ${chat.id}: сжатие выполнено, токенов было ${totalTokens}, стало ${estimateTokens(chat.messages)}`);
+
   return true;
 }
 
@@ -47,7 +52,10 @@ export async function getOrCreateChat(chatId, userId) {
 }
 
 export function addUserMessage(chat, content) {
-  chat.messages.push({ role: 'user', content });
+  chat.messages.push({ 
+    role: 'user', 
+    content 
+  });
 }
 
 export function addAssistantMessage(chat, assistantContent, assistantReasoning) {
@@ -56,11 +64,6 @@ export function addAssistantMessage(chat, assistantContent, assistantReasoning) 
     content: assistantContent,
     reasoning: assistantReasoning,
   });
-
-  if (chat.title === 'Новый чат' && assistantContent.length > 10) {
-    chat.title = assistantContent.slice(0, 30) + (assistantContent.length > 30 ? '…' : '');
-    return true;
-  }
 
   return false;
 }

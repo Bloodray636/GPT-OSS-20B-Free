@@ -40,4 +40,24 @@ export class NvidiaProvider extends AIProvider {
       yield { reasoning, content };
     }
   }
+
+  async createCompletion(messages, options = {}) {
+    const {
+      model = 'openai/gpt-oss-20b',
+      max_tokens = 30,
+      temperature = 0.2,
+      top_p = 1,
+    } = options;
+
+    const completion = await this.client.chat.completions.create({
+      model,
+      messages,
+      max_tokens,
+      temperature,
+      top_p,
+      stream: false,
+    });
+
+    return completion.choices[0]?.message?.content || '';
+  }
 }

@@ -21,8 +21,10 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   // Суммаризация
   await compressChatIfNeeded(chat, req.user.id);
 
-  if (shouldSave) {
-    addUserMessage(chat, newMessage);
+  if (shouldSave && chat.title === 'Новый чат') {
+    updateChatTitleIfNeeded(chat, newMessage, req.user.id).catch(err => {
+      console.error('Async title update failed:', err);
+    });
   }
 
   // Формирование сообщений
