@@ -859,7 +859,7 @@ input:focus, textarea:focus {
   }
   .reasoning-block {
     font-size: 0.8rem;
-  }
+  } 
 }
 
 @media (max-width: 480px) {
