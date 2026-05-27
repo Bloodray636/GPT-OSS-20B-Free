@@ -1,6 +1,7 @@
 import { getAIProvider } from '../ai/factory.js';
 
-const TITLE_MODEL = process.env.TITLE_MODEL || 'openai/gpt-oss-120b';
+// Модель для генерации заголовков
+const TITLE_MODEL = process.env.TITLE_MODEL;
 const MAX_TITLE_LENGTH = 60;
 const MAX_WORDS = 6;
 
@@ -14,12 +15,11 @@ export class TitleGenerator {
         return null;
     }
 
-    console.log('[TitleGenerator] Generating for:', userMessage.slice(0, 60));
-
     const prompt = `Создай краткий заголовок для чата (максимум 5-6 слов) на русском, отражающий суть сообщения. Не используй кавычки, markdown, эмодзи. Верни только заголовок без пояснений.\n\nСообщение: "${userMessage}"\n\nЗаголовок:`;
 
     try {
-      const raw = await this.provider.createCompletion([{ 
+      const raw = await this.provider.createCompletion(
+        [{ 
             role: 'user', 
             content: prompt 
         }],
@@ -29,7 +29,7 @@ export class TitleGenerator {
           temperature: 0.2,
         }
       );
-      console.log('[TitleGenerator] Raw AI response:', raw);
+
       return this.cleanTitle(raw);
     } catch (err) {
       console.error('Title generation failed:', err);
@@ -43,19 +43,14 @@ export class TitleGenerator {
     }
 
     let cleaned = raw
-      .replace(/[`*#_~>]/g, '') 
+      .replace(/[`*#_~>]/g, '')
       .replace(/[\n\r]+/g, ' ')
-      .replace(/\s+/g, ' ')  
-      .trim();
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^["']|["']$/g, '');
 
-    console.log('[TitleGenerator] Cleaned title:', cleaned);
-
-    // убираем кавычки
-    cleaned = cleaned.replace(/^["']|["']$/g, '');
-
-    // ограничение по длине
     if (cleaned.length > MAX_TITLE_LENGTH) {
-      cleaned = cleaned.slice(0, MAX_TITLE_LENGTH - 3) + '…';
+        cleaned = cleaned.slice(0, MAX_TITLE_LENGTH - 3) + '…';
     }
 
     return cleaned || null;

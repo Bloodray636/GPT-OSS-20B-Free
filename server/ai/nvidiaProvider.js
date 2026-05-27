@@ -37,24 +37,22 @@ export class NvidiaProvider extends AIProvider {
 
     for await (const chunk of completion) {
       const { reasoning, content } = normalizeNvidiaChunk(chunk);
+      if (reasoning) {
+        console.log('[NvidiaProvider] 📢 reasoning chunk:', reasoning.substring(0, 50));
+      } else {
+        console.log('[NvidiaProvider] ❌ no reasoning in chunk');
+      }
       yield { reasoning, content };
     }
   }
 
   async createCompletion(messages, options = {}) {
     const {
-      model = 'openai/gpt-oss-120b', // замена на надёжную модель
+      model,
       max_tokens = 40,
       temperature = 0.2,
       top_p = 1,
     } = options;
-
-    console.log('[NvidiaProvider.createCompletion] Request:', {
-      model,
-      max_tokens,
-      temperature,
-      messages: messages[0]?.content?.slice(0, 100),
-    });
 
     try {
       const completion = await this.client.chat.completions.create({
@@ -67,7 +65,6 @@ export class NvidiaProvider extends AIProvider {
       });
 
       const content = completion.choices[0]?.message?.content || '';
-      console.log('[NvidiaProvider.createCompletion] Response length:', content.length);
       return content;
     } catch (err) {
       console.error('[NvidiaProvider.createCompletion] Error:', err);
