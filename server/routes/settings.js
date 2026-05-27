@@ -3,6 +3,7 @@ import { authenticate } from '../middleware.js';
 import { validate } from '../middleware/validation.js';
 import { settingsSchema } from '../validation/schemas.js';
 import { getUserSettings, saveUserSettings } from '../db.js';
+import { supabase } from '../config.js';
 
 const router = express.Router();
 
@@ -27,7 +28,9 @@ router.post('/', authenticate, validate(settingsSchema), async (req, res) => {
       saveHistory
     );
 
-    res.json({ success: true });
+    res.json({ 
+      success: true 
+    });
   } catch (err) {
     res.status(500).json({ 
       error: err.message 
@@ -44,7 +47,9 @@ router.get('/usage', authenticate, async (req, res) => {
     .limit(100);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      error: error.message 
+    });
   }
 
   res.json(data);

@@ -5,11 +5,60 @@ import { changePassword } from './password.js';
 import './deleteAccount.js';
 import './deleteChats.js';
 
+let authToken = localStorage.getItem('auth_token');
+
+// Синхронизация темы с сервером
+async function syncThemeFromServer() {
+  try {
+    const res = await fetch('/api/settings', {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+
+    if (res.ok) {
+      const settings = await res.json();
+      if (settings.theme) {
+        saveTheme(settings.theme);
+
+        const radio = document.querySelector(`input[name="theme"][value="${settings.theme}"]`);
+
+        if (radio) {
+          radio.checked = true;
+        }
+      }
+    } else {
+      loadTheme();
+    }
+  } catch (err) {
+    console.error('Failed to sync theme:', err);
+    loadTheme();
+  }
+}
+
+// Cохранение темы на сервере
+async function saveThemeToServer(theme, currentSaveHistory) {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        theme,
+        saveHistory: currentSaveHistory
+      })
+    });
+  } catch (err) {
+    console.error('Failed to save theme to server:', err);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadProfileData();
   await loadAvatar();
   
-  loadTheme();
+  // Синхронизация темы с сервером
+  await syncThemeFromServer();
 
   // Вкладки
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -23,22 +72,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-
       tabBtns.forEach(b => b.classList.remove('active'));
-
       Object.values(tabPanes).forEach(pane => pane.classList.remove('active'));
-
       btn.classList.add('active');
-
       tabPanes[tabId].classList.add('active');
     });
   });
 
-  // Тема
-  document.querySelectorAll('input[name="theme"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      if (e.target.checked){
-        saveTheme(e.target.value);
+  const themeRadios = document.querySelectorAll('input[name="theme"]');
+
+  const currentSettings = await fetch('/api/settings', {
+    headers: { Authorization: `Bearer ${authToken}` }
+  }).then(res => res.json()).catch(() => ({}));
+  
+  themeRadios.forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      if (e.target.checked) {
+        const newTheme = e.target.value;
+        saveTheme(newTheme); // локально
+        await saveThemeToServer(newTheme, currentSettings.saveHistory);
       }
     });
   });
@@ -55,10 +107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // Смена пароля
-  DOM.changePasswordBtn.onclick = () =>{
+  DOM.changePasswordBtn.onclick = () => {
     DOM.changePasswordModal.style.display = 'flex';
   }
-
   DOM.cancelPasswordBtn.onclick = () => {
     closeAllModals();
   }
@@ -75,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.addEventListener('click', () => {
       const input = document.getElementById(btn.dataset.target);
 
-      if (input){
+      if (input) {
         input.type = input.type === 'password' ? 'text' : 'password';
       }
     });
