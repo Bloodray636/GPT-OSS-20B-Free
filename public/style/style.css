@@ -1358,14 +1358,12 @@ pre {
   transition: background 0.2s;
 }
 
-.reasoning-header:hover {
-  background: var(--bg-hover);
-}
-
 .reasoning-toggle {
   font-size: 0.8rem;
   font-weight: normal;
   transition: transform 0.2s;
+  position: absolute;
+  right: 10px;
 }
 
 .reasoning-toggle svg {
@@ -1380,6 +1378,8 @@ pre {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--reasoning-border);
+  display: flex;
+  align-items: center;
 }
 
 .reasoning-label svg{
