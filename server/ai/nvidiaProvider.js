@@ -43,13 +43,18 @@ export class NvidiaProvider extends AIProvider {
 
   async createCompletion(messages, options = {}) {
     const {
-      model = 'openai/gpt-oss-20b',
-      max_tokens = 30,
+      model = 'deepseek-ai/deepseek-v4-flash', // замена на надёжную модель
+      max_tokens = 40,
       temperature = 0.2,
       top_p = 1,
     } = options;
 
-    console.log('[NvidiaProvider.createCompletion] Request:', { model, max_tokens, temperature, messages: messages[0]?.content?.slice(0, 100) });
+    console.log('[NvidiaProvider.createCompletion] Request:', {
+      model,
+      max_tokens,
+      temperature,
+      messages: messages[0]?.content?.slice(0, 100),
+    });
 
     try {
       const completion = await this.client.chat.completions.create({
@@ -60,15 +65,13 @@ export class NvidiaProvider extends AIProvider {
         top_p,
         stream: false,
       });
-      
+
       const content = completion.choices[0]?.message?.content || '';
       console.log('[NvidiaProvider.createCompletion] Response length:', content.length);
       return content;
     } catch (err) {
       console.error('[NvidiaProvider.createCompletion] Error:', err);
-      throw err;
+      return '';
     }
-
-    return completion.choices[0]?.message?.content || '';
   }
 }
