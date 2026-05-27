@@ -13,7 +13,6 @@ import {
   updateChatTitleIfNeeded 
 } from '../services/chatStorage.js';
 
-import { getChatSummaries } from '../db.js';
 import { saveChat } from '../db.js';
 
 const router = express.Router();
@@ -29,9 +28,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   // Суммаризация
   await compressChatIfNeeded(chat, req.user.id);
 
-  if (shouldSave) {
-    addUserMessage(chat, newMessage);
-  }
+  addUserMessage(chat, newMessage);
 
   // Генерация заголовка
   if (chat.title === 'Новый чат') {
@@ -40,39 +37,24 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     });
   }
 
-  // Формирование сообщений для AI
-  const summaries = await getChatSummaries(chat.id, 2);
-  let systemPrompt = '';
-
-  if (summaries.length) {
-    systemPrompt = `Краткое содержание предыдущих частей диалога:\n${summaries.join('\n---\n')}\n\n`;
-  }
-
-  const openAiMessages = [];
-
-  if (systemPrompt) {
-    openAiMessages.push({ 
-      role: 'system', 
-      content: systemPrompt 
-    });
-  }
-
   // Добавляем все сообщения чата
-  openAiMessages.push(...chat.messages.map(msg => ({
+  const openAiMessages = chat.messages.map(msg => ({
     role: msg.role,
     content: msg.content,
-  })));
+  }));
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   const abortController = new AbortController();
-  let streamStarted = false;
+  let aborted = false;
 
   const onClose = () => {
-    if (!res.headersSent && !abortController.signal.aborted && streamStarted) {
+    if (!aborted && !abortController.signal.aborted) {
+      aborted = true;
       abortController.abort();
+      console.log('Client disconnected, aborting OpenAI request');
     }
   };
 
@@ -85,7 +67,6 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     const userId = req.user.id;
 
     for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal, userId)) {
-      if (!streamStarted) streamStarted = true;
 
       if (reasoning) {
         assistantReasoning += reasoning;
@@ -113,6 +94,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     }
   } catch (err) {
     if (err.name === 'AbortError') {
+      
       if (!res.headersSent && !res.destroyed) {
         res.end();
       }

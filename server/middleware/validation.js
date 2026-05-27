@@ -29,13 +29,14 @@ export const validate = (schema, location = 'body') => {
       next();
     } catch (err) {
       if (err instanceof z.ZodError) {
-        const errors = err.errors.map(e => ({
+        const issues = err.issues || err.errors;
+        const details = issues.map(e => ({
           path: e.path.join('.'),
           message: e.message,
         }));
 
         return res.status(400).json({ 
-            error: 'Validation failed', 
+            error: 'Ошибка валидации', 
             details: errors 
         });
       }
