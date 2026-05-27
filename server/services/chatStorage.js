@@ -14,7 +14,7 @@ export async function compressChatIfNeeded(chat, userId) {
   let totalTokens = estimateTokens(messages);
 
   if (totalTokens <= SUMMARY_TRIGGER) {
-    return false;
+    return null;
   }
 
   const splitIdx = Math.floor(messages.length * 0.7);
@@ -24,7 +24,7 @@ export async function compressChatIfNeeded(chat, userId) {
   const summary = await generateSummary(oldMessages);
   await saveChatSummary(chat.id, summary);
 
-  chat.messages = [
+  const compressed = [
     { 
       role: 'system', 
       content: `Краткое содержание предыдущего диалога:\n${summary}` 
@@ -32,9 +32,9 @@ export async function compressChatIfNeeded(chat, userId) {
     ...recentMessages,
   ];
 
-  console.log(`[Summarizer] Чат ${chat.id}: сжатие выполнено, токенов было ${totalTokens}, стало ${estimateTokens(chat.messages)}`);
+  console.log(`[Summarizer] Чат ${chat.id}: сжатие выполнено, токенов было ${totalTokens}, стало ${estimateTokens(compressed)}`);
 
-  return true;
+  return compressed;
 }
 
 export async function getOrCreateChat(chatId, userId) {

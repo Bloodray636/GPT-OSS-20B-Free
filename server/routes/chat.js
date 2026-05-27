@@ -43,6 +43,11 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     content: msg.content,
   }));
 
+  const compressed = await compressChatIfNeeded(chat, req.user.id);
+  if (compressed) {
+    openAiMessages = compressed;
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -94,7 +99,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     }
   } catch (err) {
     if (err.name === 'AbortError') {
-      
+
       if (!res.headersSent && !res.destroyed) {
         res.end();
       }
