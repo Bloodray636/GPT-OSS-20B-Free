@@ -112,7 +112,7 @@ router.put('/:chatId', authenticate, validate(chatIdParamSchema, 'params'), vali
   }
 
   res.json({ success: true });
-});
+}); 
 
 router.put('/:chatId/truncate', authenticate, validate(chatIdParamSchema, 'params'), validate(truncateChatSchema), async (req, res) => {
   const { keepIndex } = req.body;
