@@ -43,7 +43,7 @@ export class NvidiaProvider extends AIProvider {
 
   async createCompletion(messages, options = {}) {
     const {
-      model = 'deepseek-ai/deepseek-v4-flash', // замена на надёжную модель
+      model = 'openai/gpt-oss-120b', // замена на надёжную модель
       max_tokens = 40,
       temperature = 0.2,
       top_p = 1,
