@@ -38,7 +38,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   }
 
   // Добавляем все сообщения чата
-  const openAiMessages = chat.messages.map(msg => ({
+  let openAiMessages = chat.messages.map(msg => ({
     role: msg.role,
     content: msg.content,
   }));
