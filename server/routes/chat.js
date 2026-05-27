@@ -4,7 +4,15 @@ import { validate } from '../middleware/validation.js';
 import { sendMessageSchema } from '../validation/schemas.js';
 import { getUserSettings } from '../db.js';
 import { streamAIResponse } from '../services/aiService.js';
-import { getOrCreateChat, addUserMessage, addAssistantMessage, compressChatIfNeeded } from '../services/chatStorage.js';
+
+import { 
+  getOrCreateChat, 
+  addUserMessage, 
+  addAssistantMessage, 
+  compressChatIfNeeded, 
+  updateChatTitleIfNeeded 
+} from '../services/chatStorage.js';
+
 import { getChatSummaries } from '../db.js';
 import { saveChat } from '../db.js';
 
@@ -21,15 +29,21 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   // Суммаризация
   await compressChatIfNeeded(chat, req.user.id);
 
+  if (shouldSave) {
+    addUserMessage(chat, newMessage);
+  }
+
+  // Генерация заголовка
   if (shouldSave && chat.title === 'Новый чат') {
     updateChatTitleIfNeeded(chat, newMessage, req.user.id).catch(err => {
       console.error('Async title update failed:', err);
     });
   }
 
-  // Формирование сообщений
+  // Формирование сообщений для AI
   const summaries = await getChatSummaries(chat.id, 2);
   let systemPrompt = '';
+
   if (summaries.length) {
     systemPrompt = `Краткое содержание предыдущих частей диалога:\n${summaries.join('\n---\n')}\n\n`;
   }
@@ -43,7 +57,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     });
   }
 
-  // Добавление всех сообщений чата
+  // Добавляем все сообщения чата
   openAiMessages.push(...chat.messages.map(msg => ({
     role: msg.role,
     content: msg.content,
@@ -71,14 +85,12 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     const userId = req.user.id;
 
     for await (const { reasoning, content } of streamAIResponse(openAiMessages, reasoning_effort, abortController.signal, userId)) {
-      if (!streamStarted){
-        streamStarted = true;
-      }
+      if (!streamStarted) streamStarted = true;
 
       if (reasoning) {
         assistantReasoning += reasoning;
         res.write(`data: ${JSON.stringify({ 
-          type: 'reasoning',
+          type: 'reasoning', 
           text: reasoning 
         })}\n\n`);
       }
@@ -101,8 +113,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     }
   } catch (err) {
     if (err.name === 'AbortError') {
-
-      if (!res.headersSent && !res.destroyed){
+      if (!res.headersSent && !res.destroyed) {
         res.end();
       }
 
@@ -110,9 +121,15 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
     }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ 
+        error: err.message 
+      });
     } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+      res.write(`data: ${JSON.stringify({ 
+        type: 'error', 
+        message: err.message 
+      })}\n\n`);
+      
       res.end();
     }
   } finally {

@@ -1,5 +1,6 @@
 import { getChatById, saveChat, saveChatSummary } from '../db.js';
 import { generateSummary, estimateTokens } from '../summarizer.js';
+import { TitleGenerator } from './titleGenerator.js';
 
 const TOKEN_LIMIT = 10000;
 const SUMMARY_TRIGGER = 8000;
@@ -65,5 +66,36 @@ export function addAssistantMessage(chat, assistantContent, assistantReasoning) 
     reasoning: assistantReasoning,
   });
 
+  return false;
+}
+
+export async function updateChatTitleIfNeeded(chat, firstUserMessage, userId) {
+  if (chat.title !== 'Новый чат') {
+    return false;
+  }
+
+  if (!firstUserMessage) {
+    return false;
+  }
+
+  const titleGenerator = new TitleGenerator();
+  let newTitle = null;
+
+  try {
+    newTitle = await titleGenerator.generateTitle(firstUserMessage);
+  } catch (err) {
+    console.error('Title generation error:', err);
+  }
+
+  if (!newTitle || newTitle.length < 3) {
+    newTitle = titleGenerator.fallbackTitle(firstUserMessage);
+  }
+
+  if (newTitle && newTitle !== chat.title) {
+    chat.title = newTitle;
+    await saveChat(chat, userId);
+    return true;
+  }
+  
   return false;
 }
