@@ -1,6 +1,6 @@
 import { getAIProvider } from '../ai/factory.js';
 
-const TITLE_MODEL = process.env.TITLE_MODEL || 'openai/gpt-oss-120b';
+const TITLE_MODEL = process.env.TITLE_MODEL || 'deepseek-ai/deepseek-v4-flash';
 const MAX_TITLE_LENGTH = 60;
 const MAX_WORDS = 6;
 
