@@ -44,28 +44,34 @@ export const getChats = async (userId) => {
 };
 
 export const getChatById = async (chatId, userId) => {
-  const { data, error } = await supabase
+  const { data: chat, error: chatError } = await supabase
     .from('chats')
     .select('*')
     .eq('id', chatId)
     .eq('user_id', userId)
     .single();
 
-  const { data: messages } = await supabase
+  if (chatError || !chat) {
+    return null;
+  }
+
+  const { data: messages, error: msgError } = await supabase
     .from('messages')
     .select('id, role, content, reasoning, created_at')
     .eq('chat_id', chatId)
-    .order('created_at', { 
-      ascending: true 
-    });
+    .order('created_at', { ascending: true });
 
-  data.messages = messages || [];
+  if (msgError) {
+    throw msgError;
+  }
 
-  return data;
+  chat.messages = messages || [];
+
+  return chat;
 };
 
 export const saveChat = async (chat, userId) => {
-  await supabase
+  const { error: chatError } = await supabase
     .from('chats')
     .upsert(
       {
@@ -75,15 +81,21 @@ export const saveChat = async (chat, userId) => {
         created_at: chat.createdAt,
         updated_at: new Date().toISOString(),
       },
-      { 
-        onConflict: 'id' 
-      }
+      { onConflict: 'id' }
     );
 
-  await supabase
+  if (chatError) {
+    throw new Error(`Ошибка сохранения чата: ${chatError.message}`);
+  }
+
+  const { error: deleteError } = await supabase
     .from('messages')
     .delete()
     .eq('chat_id', chat.id);
+
+  if (deleteError) {
+    throw new Error(`Ошибка удаления старых сообщений: ${deleteError.message}`);
+  }
 
   if (chat.messages?.length) {
     const messagesToInsert = chat.messages.map(msg => ({
@@ -93,18 +105,26 @@ export const saveChat = async (chat, userId) => {
       reasoning: msg.reasoning || null,
     }));
 
-    await supabase
+    const { error: insertError } = await supabase
       .from('messages')
       .insert(messagesToInsert);
+
+    if (insertError) {
+      throw new Error(`Failed to insert messages: ${insertError.message}`);
+    }
   }
 };
 
 export const deleteChat = async (chatId, userId) => {
-  await supabase
+  const { error } = await supabase
     .from('chats')
     .delete()
     .eq('id', chatId)
     .eq('user_id', userId);
+
+  if (error) {
+    throw error;
+  }
 };
 
 export async function logAIUsage(userId, model, promptTokens, completionTokens, estimatedCost) {
@@ -120,12 +140,20 @@ export async function logAIUsage(userId, model, promptTokens, completionTokens, 
       total_tokens: totalTokens,
       estimated_cost: estimatedCost,
   });
+
+  if (error) {
+    console.error('Failed to log AI usage:', error);
+  }
 }
 
 export async function saveChatSummary(chatId, summaryText) {
   const { error } = await supabase
     .from('chat_summaries')
     .insert({ chat_id: chatId, summary_text: summaryText });
+
+  if (error) {
+    console.error('Failed to save chat summary:', error);
+  }
 }
 
 export async function getChatSummaries(chatId, limit = 3) {
@@ -135,6 +163,10 @@ export async function getChatSummaries(chatId, limit = 3) {
     .eq('chat_id', chatId)
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  if (error) {
+    return [];
+  }
 
   return data.map(row => row.summary_text);
 }
