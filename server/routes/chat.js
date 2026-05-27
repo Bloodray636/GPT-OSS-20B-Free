@@ -46,7 +46,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   const compressed = await compressChatIfNeeded(chat, req.user.id);
   if (compressed) {
     openAiMessages = compressed;
-  }
+  } 
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
