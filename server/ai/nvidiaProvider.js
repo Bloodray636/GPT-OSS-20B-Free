@@ -49,14 +49,25 @@ export class NvidiaProvider extends AIProvider {
       top_p = 1,
     } = options;
 
-    const completion = await this.client.chat.completions.create({
-      model,
-      messages,
-      max_tokens,
-      temperature,
-      top_p,
-      stream: false,
-    });
+    console.log('[NvidiaProvider.createCompletion] Request:', { model, max_tokens, temperature, messages: messages[0]?.content?.slice(0, 100) });
+
+    try {
+      const completion = await this.client.chat.completions.create({
+        model,
+        messages,
+        max_tokens,
+        temperature,
+        top_p,
+        stream: false,
+      });
+      
+      const content = completion.choices[0]?.message?.content || '';
+      console.log('[NvidiaProvider.createCompletion] Response length:', content.length);
+      return content;
+    } catch (err) {
+      console.error('[NvidiaProvider.createCompletion] Error:', err);
+      throw err;
+    }
 
     return completion.choices[0]?.message?.content || '';
   }
