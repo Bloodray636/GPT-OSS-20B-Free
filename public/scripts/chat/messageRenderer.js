@@ -1,5 +1,3 @@
-// public/scripts/chat/messageRenderer.js
-
 import { DOM } from './config.js';
 import { escapeHtml, scrollToBottom } from './utils.js';
 import { showEditModal, showInfoModal } from './modals.js';
@@ -49,9 +47,11 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
 
       const toggleIcon = document.createElement('span');
       toggleIcon.className = 'reasoning-toggle';
-      toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
-      </svg>`;
+      toggleIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+        </svg>
+      `;
 
       const label = document.createElement('span');
       label.className = 'reasoning-label';
@@ -79,15 +79,19 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
         if (isCollapsed) {
           block.classList.add('expanded');
           header.dataset.collapsed = 'false';
-          toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
-          </svg>`;
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
+            </svg>
+          `;
         } else {
           block.classList.remove('expanded');
           header.dataset.collapsed = 'true';
-          toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
-          </svg>`;
+          toggleIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+            </svg>
+          `;
         }
       });
     }
@@ -102,9 +106,11 @@ export const appendMessageToDOM = async (role, content, reasoning = null, msgInd
     const copyBtn = document.createElement('div');
     copyBtn.className = 'copy-response-btn';
     copyBtn.title = 'Копировать';
-    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-      <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
-    </svg>`;
+    copyBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"/>
+      </svg>
+    `;
 
     assistantDiv.appendChild(copyBtn);
 
@@ -125,22 +131,69 @@ export const createStreamingAssistantContainer = () => {
   const assistantDiv = document.createElement('div');
   assistantDiv.className = 'message assistant';
 
+  const wrapper = document.createElement('div');
+  wrapper.className = 'reasoning-wrapper';
+
+  const header = document.createElement('div');
+  header.className = 'reasoning-header';
+  header.dataset.collapsed = 'true';
+
+  const toggleIcon = document.createElement('span');
+  toggleIcon.className = 'reasoning-toggle';
+  toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+  </svg>`;
+
+  const label = document.createElement('span');
+  label.className = 'reasoning-label';
+  label.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4.5a3 3 0 0 0-2.567 4.554a3.001 3.001 0 0 0 0 5.893M7 4.5a2.5 2.5 0 0 1 5 0v15a2.5 2.5 0 0 1-5 0a3 3 0 0 1-2.567-4.553M7 4.5c0 .818.393 1.544 1 2m-3.567 8.447A3 3 0 0 1 6 13.67m11 5.83a3 3 0 0 0 2.567-4.554a3.001 3.001 0 0 0 0-5.893M17 19.5a2.5 2.5 0 0 1-5 0v-15a2.5 2.5 0 0 1 5 0a3 3 0 0 1 2.567 4.553M17 19.5c0-.818-.393-1.544-1-2m3.567-8.447A3 3 0 0 1 18 10.33"/>
+    </svg>
+    Рассуждения
+  `;
+
+  header.appendChild(toggleIcon);
+  header.appendChild(label);
+
   const reasoningBlock = document.createElement('div');
   reasoningBlock.className = 'reasoning-block';
   reasoningBlock.style.maxHeight = '0';
 
+  wrapper.appendChild(header);
+  wrapper.appendChild(reasoningBlock);
+  assistantDiv.appendChild(wrapper);
+
   const contentBlock = document.createElement('div');
   contentBlock.className = 'content-block';
   contentBlock.dataset.raw = '';
-
-  assistantDiv.appendChild(reasoningBlock);
   assistantDiv.appendChild(contentBlock);
-  DOM.chatContainer.appendChild(assistantDiv);
 
+  DOM.chatContainer.appendChild(assistantDiv);
   scrollToBottom();
 
-  return { 
-    reasoningBlock, 
-    contentBlock 
-  };
+  header.addEventListener('click', () => {
+    const isCollapsed = header.dataset.collapsed === 'true';
+    if (isCollapsed) {
+      reasoningBlock.classList.add('expanded');
+      reasoningBlock.style.maxHeight = 'none';
+      header.dataset.collapsed = 'false';
+      toggleIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-6 7-7-6"/>
+        </svg>
+      `;
+    } else {
+      reasoningBlock.classList.remove('expanded');
+      reasoningBlock.style.maxHeight = '0';
+      header.dataset.collapsed = 'true';
+      toggleIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l6 7-6 7"/>
+        </svg>
+      `;
+    }
+  });
+
+  return { reasoningBlock, contentBlock };
 };

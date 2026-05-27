@@ -66,7 +66,8 @@ export const updateReasoning = (text) => {
     }
 
     reasoningDiv.innerHTML += escapeHtml(text);
-
+    state.streamingData.reasoningDiv.style.display = 'block';
+    
     scrollToBottom();
   }
 };
