@@ -1,7 +1,7 @@
 import { getAIProvider } from '../ai/factory.js';
 
 // Модель для генерации заголовков
-const TITLE_MODEL = process.env.TITLE_MODEL;
+const TITLE_MODEL = process.env.TITLE_MODEL || 'deepseek-ai/deepseek-v4-flash';
 const MAX_TITLE_LENGTH = 60;
 const MAX_WORDS = 6;
 
