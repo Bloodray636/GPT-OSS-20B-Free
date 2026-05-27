@@ -10,7 +10,7 @@ export class NvidiaProvider extends AIProvider {
 
   async *streamCompletion(messages, options = {}, signal = null) {
     const {
-      model = 'openai/gpt-oss-120b', 
+      model = 'openai/gpt-oss-120b',
       reasoning_effort = 'medium',
       max_tokens = 4096,
       temperature = 1,
@@ -37,11 +37,6 @@ export class NvidiaProvider extends AIProvider {
 
     for await (const chunk of completion) {
       const { reasoning, content } = normalizeNvidiaChunk(chunk);
-      if (reasoning) {
-        console.log('[NvidiaProvider] 📢 reasoning chunk:', reasoning.substring(0, 50));
-      } else {
-        console.log('[NvidiaProvider] ❌ no reasoning in chunk');
-      }
       yield { reasoning, content };
     }
   }
@@ -54,9 +49,11 @@ export class NvidiaProvider extends AIProvider {
       top_p = 1,
     } = options;
 
+    const effectiveModel = model;
+
     try {
       const completion = await this.client.chat.completions.create({
-        model,
+        model: effectiveModel,
         messages,
         max_tokens,
         temperature,
