@@ -34,7 +34,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
   }
 
   // Генерация заголовка
-  if (shouldSave && chat.title === 'Новый чат') {
+  if (chat.title === 'Новый чат') {
     updateChatTitleIfNeeded(chat, newMessage, req.user.id).catch(err => {
       console.error('Async title update failed:', err);
     });
@@ -129,7 +129,7 @@ router.post('/', authenticate, validate(sendMessageSchema), async (req, res) => 
         type: 'error', 
         message: err.message 
       })}\n\n`);
-      
+
       res.end();
     }
   } finally {
