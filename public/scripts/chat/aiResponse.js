@@ -6,8 +6,6 @@ import { loadChats, openChat } from './chatManagement.js';
 import { clearDraftForChat } from './draft.js';
 import { renderChatList } from './chatListRenderer.js';
 
-let titleUpdateScheduled = false;
-
 export const generateNewResponse = async (userMessage) => {
   const { reasoningBlock, contentBlock } = createStreamingAssistantContainer();
   state.streamingData.reasoningDiv = reasoningBlock;
@@ -40,12 +38,10 @@ export const generateNewResponse = async (userMessage) => {
 
     if (!response.ok) {
       let errorMessage = `Ошибка сервера (${response.status})`;
-
       try {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
       } catch {}
-      
       throw new Error(errorMessage);
     }
 
@@ -55,74 +51,35 @@ export const generateNewResponse = async (userMessage) => {
 
     while (true) {
       const { done, value } = await reader.read();
-
-      if (done) {
-        break;
-      } 
-
-      buffer += decoder.decode(value, { 
-        stream: true 
-      });
-
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
-
-            if (data.type === 'reasoning') {
-              updateReasoning(data.text);
-            } else if (data.type === 'content') {
-              updateContent(data.text); 
-            } else if (data.type === 'error') {
-              updateContent(`Ошибка: ${data.message}`);
-            }
+            if (data.type === 'reasoning') updateReasoning(data.text);
+            else if (data.type === 'content') updateContent(data.text);
+            else if (data.type === 'error') updateContent(`Ошибка: ${data.message}`);
           } catch (e) {}
         }
       }
     }
 
+    // После завершения стрима обновляем список чатов и заголовок
     await loadChats();
 
     const updatedChat = state.chats.find(c => c.id === targetChatId);
-
-    if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
+    if (updatedChat && updatedChat.title !== 'Новый чат') {
       DOM.currentChatTitle.textContent = updatedChat.title;
+      // Обновляем заголовок в локальном массиве чатов (чтобы боковая панель синхронизировалась)
+      const localChat = state.chats.find(c => c.id === targetChatId);
+      if (localChat) localChat.title = updatedChat.title;
+      // Перерисовываем список чатов
+      renderChatList();
     }
 
-    // Асинхронное обновление заголовка
-    if (isFirstMessage && !titleUpdateScheduled) {
-      titleUpdateScheduled = true;
-      setTimeout(async () => {
-        try {
-          // Загружаем свежий список чатов
-          await loadChats();
-
-          if (state.currentChatId === targetChatId) {
-            const freshChat = state.chats.find(c => c.id === targetChatId);
-
-            if (freshChat && freshChat.title !== 'Новый чат') {
-              // Обновляем заголовок в DOM
-              DOM.currentChatTitle.textContent = freshChat.title;
-
-              const chatInList = state.chats.find(c => c.id === targetChatId);
-
-              if (chatInList) {
-                chatInList.title = freshChat.title; 
-              }
-
-              renderChatList(); // перерисовываем список чатов (импортируйте, если нужно)
-            }
-          }
-        } catch (err) {
-          console.error('Ошибка обновления заголовка:', err);
-        } finally {
-          titleUpdateScheduled = false;
-        }
-      }, 5000);
-    }
   } catch (err) {
     if (err.name !== 'AbortError') {
       updateContent(`Ошибка: ${err.message}`);
@@ -140,10 +97,7 @@ export const generateNewResponse = async (userMessage) => {
 
 export const sendMessage = async () => {
   const text = DOM.userInput.value.trim();
-
-  if (!text || state.streaming) {
-    return;
-  }
+  if (!text || state.streaming) return;
 
   DOM.userInput.value = '';
   clearDraftForChat();
@@ -155,9 +109,7 @@ export const sendMessage = async () => {
 export const stopGeneration = () => {
   if (state.streamingData.abortController) {
     state.streamingData.abortController.abort();
-
     updateContent('(генерация остановлена)');
-
     state.streaming = false;
     DOM.sendBtn.disabled = false;
     DOM.stopBtn.style.display = 'none';
