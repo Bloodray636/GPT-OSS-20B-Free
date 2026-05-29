@@ -18,6 +18,7 @@ export const generateNewResponse = async (userMessage) => {
   const reasoningEffort = DOM.reasoningSelect.value;
   state.streamingData.abortController = new AbortController();
 
+  const targetChatId = state.currentChatId;
   const chatBefore = state.chats.find(c => c.id === state.currentChatId);
   const isFirstMessage = chatBefore && (!chatBefore.messages || chatBefore.messages.length === 0);
 
@@ -37,6 +38,19 @@ export const generateNewResponse = async (userMessage) => {
 
       signal: state.streamingData.abortController.signal
     });
+
+    if (!response.ok) {
+      let errorMessage = `Ошибка сервера (${response.status})`
+
+      try {
+        let errorData = await response.json;
+        errorMessage = errorData || errorMessage;
+      } catch {
+
+      }
+
+      throw new Error(errorMessage);
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -76,6 +90,7 @@ export const generateNewResponse = async (userMessage) => {
     // Обновление списка чатов
     await loadChats();
 
+    // Обновление заголовка текущего чата
     const updatedChat = state.chats.find(c => c.id === state.currentChatId);
 
     if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
@@ -84,10 +99,23 @@ export const generateNewResponse = async (userMessage) => {
 
     if (isFirstMessage && !titleUpdateScheduled) {
       titleUpdateScheduled = true;
+
       setTimeout(async () => {
-        await loadChats();
-        await openChat(state.currentChatId);
-        titleUpdateScheduled = false;
+        try {
+          await loadChats();
+
+          if (state.currentChatId === targetChatId) {
+            const freshChat = state.chats.find(c => c.id === targetChatId);
+            if (freshChat && DOM.currentChatTitle.textContent !== freshChat.title) {
+              DOM.currentChatTitle.textContent = freshChat.title
+            }
+          }
+        } catch (err) {
+          console.error('Ошибка обновления заголовка', err)
+        } finally {
+          await openChat(state.currentChatId);
+          titleUpdateScheduled = false;
+        }
       }, 5000);
     }
 
