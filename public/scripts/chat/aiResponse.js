@@ -4,6 +4,7 @@ import { updateReasoning, updateContent } from './streamHandlers.js';
 import { createStreamingAssistantContainer, appendMessageToDOM } from './messageRenderer.js';
 import { loadChats, openChat } from './chatManagement.js';
 import { clearDraftForChat } from './draft.js';
+import { renderChatList } from './chatListRenderer.js';
 
 let titleUpdateScheduled = false;
 
@@ -19,7 +20,7 @@ export const generateNewResponse = async (userMessage) => {
   state.streamingData.abortController = new AbortController();
 
   const targetChatId = state.currentChatId;
-  const chatBefore = state.chats.find(c => c.id === state.currentChatId);
+  const chatBefore = state.chats.find(c => c.id === targetChatId);
   const isFirstMessage = chatBefore && (!chatBefore.messages || chatBefore.messages.length === 0);
 
   try {
@@ -29,26 +30,22 @@ export const generateNewResponse = async (userMessage) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authToken}`
       },
-
       body: JSON.stringify({
-        chatId: state.currentChatId,
+        chatId: targetChatId,
         newMessage: userMessage,
         reasoning_effort: reasoningEffort
       }),
-
       signal: state.streamingData.abortController.signal
     });
 
     if (!response.ok) {
-      let errorMessage = `Ошибка сервера (${response.status})`
+      let errorMessage = `Ошибка сервера (${response.status})`;
 
       try {
-        let errorData = await response.json;
-        errorMessage = errorData || errorMessage;
-      } catch {
-
-      }
-
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {}
+      
       throw new Error(errorMessage);
     }
 
@@ -61,7 +58,7 @@ export const generateNewResponse = async (userMessage) => {
 
       if (done) {
         break;
-      }
+      } 
 
       buffer += decoder.decode(value, { 
         stream: true 
@@ -78,7 +75,7 @@ export const generateNewResponse = async (userMessage) => {
             if (data.type === 'reasoning') {
               updateReasoning(data.text);
             } else if (data.type === 'content') {
-              updateContent(data.text);
+              updateContent(data.text); 
             } else if (data.type === 'error') {
               updateContent(`Ошибка: ${data.message}`);
             }
@@ -87,36 +84,45 @@ export const generateNewResponse = async (userMessage) => {
       }
     }
 
-    // Обновление списка чатов
     await loadChats();
 
-    // Обновление заголовка текущего чата
-    const updatedChat = state.chats.find(c => c.id === state.currentChatId);
+    const updatedChat = state.chats.find(c => c.id === targetChatId);
 
     if (updatedChat && DOM.currentChatTitle.textContent !== updatedChat.title) {
       DOM.currentChatTitle.textContent = updatedChat.title;
     }
 
+    // Асинхронное обновление заголовка
     if (isFirstMessage && !titleUpdateScheduled) {
       titleUpdateScheduled = true;
-
       setTimeout(async () => {
         try {
+          // Загружаем свежий список чатов
           await loadChats();
+
           if (state.currentChatId === targetChatId) {
             const freshChat = state.chats.find(c => c.id === targetChatId);
-            if (freshChat && DOM.currentChatTitle.textContent !== freshChat.title) {
+
+            if (freshChat && freshChat.title !== 'Новый чат') {
+              // Обновляем заголовок в DOM
               DOM.currentChatTitle.textContent = freshChat.title;
+
+              const chatInList = state.chats.find(c => c.id === targetChatId);
+
+              if (chatInList) {
+                chatInList.title = freshChat.title; 
+              }
+
+              renderChatList(); // перерисовываем список чатов (импортируйте, если нужно)
             }
           }
         } catch (err) {
-          console.error('Ошибка при отложенном обновлении заголовка:', err);
+          console.error('Ошибка обновления заголовка:', err);
         } finally {
           titleUpdateScheduled = false;
         }
       }, 5000);
     }
-
   } catch (err) {
     if (err.name !== 'AbortError') {
       updateContent(`Ошибка: ${err.message}`);
@@ -140,7 +146,6 @@ export const sendMessage = async () => {
   }
 
   DOM.userInput.value = '';
-
   clearDraftForChat();
 
   await appendMessageToDOM('user', text);
