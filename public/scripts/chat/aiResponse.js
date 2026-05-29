@@ -103,17 +103,15 @@ export const generateNewResponse = async (userMessage) => {
       setTimeout(async () => {
         try {
           await loadChats();
-
           if (state.currentChatId === targetChatId) {
             const freshChat = state.chats.find(c => c.id === targetChatId);
             if (freshChat && DOM.currentChatTitle.textContent !== freshChat.title) {
-              DOM.currentChatTitle.textContent = freshChat.title
+              DOM.currentChatTitle.textContent = freshChat.title;
             }
           }
         } catch (err) {
-          console.error('Ошибка обновления заголовка', err)
+          console.error('Ошибка при отложенном обновлении заголовка:', err);
         } finally {
-          await openChat(state.currentChatId);
           titleUpdateScheduled = false;
         }
       }, 5000);
