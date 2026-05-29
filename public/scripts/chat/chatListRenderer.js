@@ -1,7 +1,13 @@
 import { DOM, state } from './config.js';
 import { showRenameModal } from './modals.js';
-import { deleteChatConfirm } from './chatApi.js'; 
+import { deleteChatConfirm } from './chatApi.js';
 import { openChat } from './chatActions.js';
+
+let isGlobalListenerAdded = false;
+
+const closeAllDropdowns = () => {
+  document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
+};
 
 export const renderChatList = () => {
   DOM.chatList.innerHTML = '';
@@ -11,7 +17,7 @@ export const renderChatList = () => {
     li.dataset.id = chat.id;
 
     if (state.currentChatId === chat.id) {
-        li.classList.add('active');   
+      li.classList.add('active');
     }
 
     const textSpan = document.createElement('span');
@@ -50,10 +56,11 @@ export const renderChatList = () => {
     li.appendChild(menuWrapper);
     DOM.chatList.appendChild(li);
 
+    // Открытие/закрытие конкретного дропдауна
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
-      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      closeAllDropdowns(); // Закрываем все
+      dropdown.style.display = 'block'; // Открываем текущий
     });
 
     dropdown.querySelector('.rename-chat-item').addEventListener('click', (e) => {
@@ -69,7 +76,9 @@ export const renderChatList = () => {
     });
   });
 
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.chat-dropdown').forEach(d => d.style.display = 'none');
-  });
+  // Глобальный слушатель
+  if (!isGlobalListenerAdded) {
+    document.addEventListener('click', closeAllDropdowns);
+    isGlobalListenerAdded = true;
+  }
 };
