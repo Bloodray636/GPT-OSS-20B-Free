@@ -37,7 +37,7 @@ export const validate = (schema, location = 'body') => {
 
         return res.status(400).json({ 
             error: 'Ошибка валидации', 
-            details: errors 
+            details: details 
         });
       }
       
