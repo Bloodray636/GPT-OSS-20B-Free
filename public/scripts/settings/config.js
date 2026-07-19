@@ -6,6 +6,7 @@ export function setAuthToken(newToken) {
 }
 
 export const DOM = {
+  // Вкладки
   tabBtns: document.querySelectorAll('.tab-btn'),
   
   tabPanes: {
@@ -14,7 +15,10 @@ export const DOM = {
     data: document.getElementById('tab-data')
   },
 
+  // Тема
   themeRadios: document.querySelectorAll('input[name="theme"]'),
+
+  // Профиль
   settingsAvatar: document.getElementById('settingsAvatar'),
   changeAvatarBtn: document.getElementById('changeAvatarBtn'),
   avatarInput: document.getElementById('avatarInput'),
@@ -22,7 +26,12 @@ export const DOM = {
   profileEmail: document.getElementById('profileEmail'),
   changePasswordBtn: document.getElementById('changePasswordBtn'),
   deleteAccountBtn: document.getElementById('deleteAccountBtn'),
+  changeUsernameBtn: document.getElementById('changeUsernameBtn'),
+
+  // Данные
   deleteAllChatsBtn: document.getElementById('deleteAllChatsBtn'),
+
+  // Модальные окна
   changePasswordModal: document.getElementById('changePasswordModal'),
   changeUsernameModal: document.getElementById('changeUsernameModal'),
   confirmModal: document.getElementById('confirmModal'),
