@@ -1,5 +1,5 @@
 import { authToken, DOM, currentUser as currUser } from './config.js';
-import { fetchJSON, showInfoModal } from './utils.js';
+import { fetchJSON, showInfoModal, closeAllModals } from './utils.js';
 
 export const loadProfileData = async () => {
   try {
@@ -53,5 +53,48 @@ export const uploadAvatar = async (file) => {
     showInfoModal('Успех', 'Аватар обновлён');
   } catch (err) {
     showInfoModal('Ошибка', err.message);
+  }
+};
+
+export const changeUsername = async () => {
+  const newName = DOM.newUsernameInput.value.trim();
+
+  if (!newName) {
+    DOM.usernameError.textContent = 'Введите новый никнейм';
+    return;
+  }
+
+  if (newName.length < 3 || !/^[a-zA-Z0-9_]+$/.test(newName)) {
+    DOM.usernameError.textContent = 'Минимум 3 символа, буквы/цифры/_';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/change-username', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ 
+        newUsername: newName 
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showInfoModal('Успех', `Никнейм изменён на ${newName}`);
+      // Обновляем отображение в настройках
+      DOM.currentUsername.textContent = newName;
+      DOM.newUsernameInput.value = '';
+      DOM.usernameError.textContent = '';
+      
+      closeAllModals();
+    } else {
+      DOM.usernameError.textContent = data.error || 'Ошибка';
+    }
+  } catch {
+    DOM.usernameError.textContent = 'Ошибка соединения';
   }
 };

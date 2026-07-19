@@ -1,6 +1,6 @@
 import { DOM } from './config.js';
 import { loadTheme, saveTheme, closeAllModals } from './utils.js';
-import { loadProfileData, loadAvatar, uploadAvatar } from './profile.js';
+import { loadProfileData, loadAvatar, uploadAvatar, changeUsername } from './profile.js';
 import { changePassword } from './password.js';
 import './deleteAccount.js';
 import './deleteChats.js';
@@ -110,11 +110,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   DOM.changePasswordBtn.onclick = () => {
     DOM.changePasswordModal.style.display = 'flex';
   }
+
   DOM.cancelPasswordBtn.onclick = () => {
     closeAllModals();
   }
 
   DOM.savePasswordBtn.onclick = changePassword;
+
+  DOM.changeUsernameBtn.onclick = () => {
+    DOM.changeUsernameModal.style.display = 'flex';
+  };
+
+  DOM.cancelUsernameBtn.onclick = () => closeAllModals();
+
+  DOM.saveUsernameBtn.onclick = changeUsername;
 
   // Удаление аккаунта
   DOM.deleteAccountBtn.onclick = () => {
