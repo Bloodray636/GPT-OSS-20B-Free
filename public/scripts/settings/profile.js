@@ -85,16 +85,21 @@ export const changeUsername = async () => {
 
     if (res.ok) {
       showInfoModal('Успех', `Никнейм изменён на ${newName}`);
+
+      if (DOM.profileUsername) {
+        DOM.profileUsername.textContent = newName;
+      }
+
       // Обновляем отображение в настройках
-      DOM.currentUsername.textContent = newName;
       DOM.newUsernameInput.value = '';
       DOM.usernameError.textContent = '';
-      
+
       closeAllModals();
     } else {
-      DOM.usernameError.textContent = data.error || 'Ошибка';
+      DOM.usernameError.textContent = data.error || 'Ошибка при смене ника';
     }
-  } catch {
+  } catch (err) {
+    console.error('Change username error:', err);
     DOM.usernameError.textContent = 'Ошибка соединения';
   }
 };
