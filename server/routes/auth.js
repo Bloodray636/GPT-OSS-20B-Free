@@ -36,7 +36,7 @@ const createUserSettingsAndProfile = async (userId, username) => {
       ),
     ]);
   } catch (err) {
-    console.error('Failed to create user_settings/profile:', err);
+    console.error('Ошибка при создании профиля', err);
   }
 };
 
@@ -45,29 +45,41 @@ router.post('/register', validate(registerSchema), async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Server misconfiguration' });
+    return res.status(500).json({ 
+      error: 'Server misconfiguration' 
+    });
   }
 
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { username },
-    });
+    const { data, error } = await supabaseAdmin
+      .auth
+      .admin
+      .createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { username },
+      });
 
     if (error) {
-      if (error.message.includes('already been registered')) {
-        const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+      if (error.message.includes('Уже зарегистрирован')) {
+        const { data: signData, error: signError } = await supabase
+          .auth
+          .signInWithPassword({ 
+            email, 
+            password 
+          });
 
-        if (signError) {
-          return res.status(409).json({ error: 'User exists but wrong credentials' });
+        if (signError || !signData.session?.access_token) {
+          return res.status(409).json({ 
+            error: 'Пользователь существует, но не может войти в систему' 
+          });
         }
 
         return res.json({
           success: true,
-          token: signData.session?.access_token,
-          refresh_token: signData.session?.refresh_token,
+          token: signData.session.access_token,
+          refresh_token: signData.session.refresh_token,
         });
       }
 
@@ -75,33 +87,57 @@ router.post('/register', validate(registerSchema), async (req, res) => {
     }
 
     const userId = data.user.id;
+    await createUserSettingsAndProfile(userId, username);
 
-    createUserSettingsAndProfile(userId, username);
-
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Репликация
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     let token = null;
     let refreshToken = null;
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    try {
-      const { data: signData, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+    while (attempts < maxAttempts && !token) {
+      try {
+        const { data: signData, error: signError } = await supabase
+          .auth
+          .signInWithPassword({ 
+            email, 
+            password 
+          });
 
-      if (!signError && signData?.session) {
-        token = signData.session.access_token;
-        refreshToken = signData.session.refresh_token;
-      }
+        if (!signError && signData?.session?.access_token) {
+          token = signData.session.access_token;
+          refreshToken = signData.session.refresh_token;
+          break;
+        }
+      } catch {}
       
-    } catch (signErr) {
-      console.warn('Sign-in after registration failed (non-critical):', signErr);
+      attempts++;
+
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    return res.json({ 
+    if (!token) {
+      // Пользователь создан
+      return res.status(202).json({
+        success: true,
+        message: 'Аккаунт создан, просьба выйти',
+      });
+    }
+
+    return res.json({
       success: true,
-      token, 
-      refresh_token: refreshToken 
+      token,
+      refresh_token: refreshToken,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Registration failed' });
+    console.error(err);
+    res.status(500).json({ 
+      error: err.message || 'Ошибка регистрации' 
+    });
   }
 });
 
@@ -110,13 +146,21 @@ router.post('/refresh', async (req, res) => {
   const { refresh_token } = req.body;
 
   if (!refresh_token) {
-    return res.status(400).json({ error: 'No refresh token' });
+    return res.status(400).json({ 
+      error: 'Не обновился token' 
+    });
   }
 
-  const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+  const { data, error } = await supabase
+    .auth
+    .refreshSession({ 
+      refresh_token 
+    });
 
   if (error) {
-    return res.status(401).json({ error: error.message });
+    return res.status(401).json({ 
+      error: error.message 
+    });
   }
 
   res.json({
@@ -128,10 +172,18 @@ router.post('/refresh', async (req, res) => {
 // Логин
 router.post('/login', validate(loginSchema), async (req, res) => {
   const { email, password } = req.body;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  const { data, error } = await supabase
+    .auth
+    .signInWithPassword({ 
+      email, 
+      password 
+    });
 
   if (error) {
-    return res.status(401).json({ error: 'Invalid credentials' });
+    return res.status(401).json({ 
+      error: 'Invalid credentials' 
+    });
   }
 
   res.json({
@@ -155,22 +207,34 @@ router.get('/status', authenticate, (req, res) => {
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
-  const { error: signError } = await supabase.auth.signInWithPassword({
-    email: req.user.email,
-    password: oldPassword,
-  });
+  const { error: signError } = await supabase
+    .auth
+    .signInWithPassword({
+      email: req.user.email,
+      password: oldPassword,
+    });
 
   if (signError) {
-    return res.status(401).json({ error: 'Old password incorrect' });
+    return res.status(401).json({ 
+      error: 'Старый пароль не корректный' 
+    });
   }
 
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  const { error } = await supabase
+    .auth
+    .updateUser({ 
+      password: newPassword 
+    });
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      error: error.message 
+    });
   }
 
-  res.json({ success: true });
+  res.json({ 
+    success: true 
+  });
 });
 
 // Смена никнейма
@@ -184,7 +248,9 @@ router.post('/change-username', authenticate, validate(changeUsernameSchema), as
     .single();
 
   if (existing) {
-    return res.status(409).json({ error: 'Username taken' });
+    return res.status(409).json({ 
+      error: 'Username taken' }
+    );
   }
 
   const { error } = await supabase
@@ -193,10 +259,15 @@ router.post('/change-username', authenticate, validate(changeUsernameSchema), as
     .eq('id', req.user.id);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      error: error.message 
+    });
   }
 
-  res.json({ success: true, newUsername });
+  res.json({ 
+    success: true, 
+    newUsername 
+  });
 });
 
 // Удаление аккаунта
@@ -204,7 +275,9 @@ router.delete('/delete-account', authenticate, validate(deleteAccountSchema), as
   const { password } = req.body;
   
   if (!supabaseAdmin) {
-    return res.status(500).json({ error: 'Admin client not configured' });
+    return res.status(500).json({ 
+      error: 'Административный клиент не настроен' 
+    });
   }
 
   const { error: signError } = await supabase.auth.signInWithPassword({
@@ -213,19 +286,30 @@ router.delete('/delete-account', authenticate, validate(deleteAccountSchema), as
   });
 
   if (signError) {
-    return res.status(401).json({ error: 'Invalid password' });
+    return res.status(401).json({ 
+      error: 'Некорректный пароль' 
+    });
   }
 
-  await supabase.from('profiles').delete().eq('id', req.user.id);
+  await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', req.user.id);
 
-  // 2. Удаляем пользователя из auth.users
-  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(req.user.id);
+  // Удаляем пользователя
+  const { error: deleteError } = await supabaseAdmin
+    .auth
+    .admin
+    .deleteUser(req.user.id);
+
   if (deleteError) {
-    console.error('Delete user error:', deleteError);
-    return res.status(500).json({ error: 'Failed to delete account. Please try again.' });
+    console.error('Ошибка удаления пользователя:', deleteError);
+    return res.status(500).json({ error: 'Ошибка при удалении аккаунта. Пожалуйста, повторите снова.' });
   }
 
-  res.json({ success: true });
+  res.json({ 
+    success: true 
+  });
 });
 
 export default router;

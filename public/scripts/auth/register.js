@@ -36,11 +36,21 @@ export async function handleRegister() {
     const data = await res.json();
 
     if (res.ok) {
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      window.location.href = '/chat.html';
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        window.location.href = '/chat.html';
+      } else if (data.message) {
+        registerError.textContent = data.message;
+
+        setTimeout(() => {
+          document.getElementById('showLogin').click();
+        }, 2000);
+      } else {
+        registerError.textContent = 'Аккаунт создан, но произошла ошибка входа. Пожалуйста, войдите вручную.';
+      }
     } else {
-      elements.registerError.textContent = data.error || 'Ошибка регистрации';
+      registerError.textContent = data.error || 'Ошибка регистрации';
     }
   } catch {
     elements.registerError.textContent = 'Ошибка соединения';
